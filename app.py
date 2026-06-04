@@ -124,12 +124,7 @@ if st.button("🎯 Evaluate All Responses", type="primary"):
                         response_a=resp_a,
                         name_b=name_b,
                         response_b=resp_b
-                    )
-                     "content": p_prompt}]
-                        )
-                        parsed = parse_json_response(result.content[0].text)
-                        if parsed:
-                            parsed["match"] = f"{name_a} vs {name_b}"
+                name_b}"
                             pairwise_results.append(parsed)
                     except Exception as e:
                         st.error(f"Pairwise error: {e}")
@@ -143,13 +138,7 @@ if st.session_state.evaluation_results:
     # Build dataframe
     metrics = ["Factual Integrity", "Constraint Adherence", "Reasoning Transparency", 
                "Fairness & Bias", "Practical Utility"]
-    metric_keys = ["factual_integrity", "constraint_adherence", "reasoning_transparency",
-                   "fairness_bias", "practical_utility"]
-    
-    try:
-        ],
-            "ChatGPT": [results["chatgpt"][k] for k in metric_keys],
-            "Gemini": [results["gemini"][k] for k in metric_keys],
+    metric_keys = ["factual_integrity", "constraint_adher][k] for k in metric_keys],
         }
         df = pd.DataFrame(data)
         st.dataframe(df, use_container_width=True)
@@ -183,11 +172,11 @@ if st.session_state.evaluation_results:
         st.json(results)
 
 if st.session_state.pairwise_results:
-    st.header("⚔️ Pairwise Comparison Results (MT-Bench Style)")
+    st.header("⚔️ Pairwise Comparison Results (MT-B', 'N/A')}")
+            st.write(f"**Key Differentiator:** {match.get('key_differentiator', 'N/A')}")
     
-    for match/A')}**"):
-            st.write(f"**Rationale:** {match.get('rationale', 'N/A')}")
-            st.write(f"**Key Differentiator:**0, "Gemini": 0, "Tie": 0}
+    # Win counts
+    win_counts = {"Claude": 0, "ChatGPT": 0, "Gemini": 0, "Tie": 0}
     for match in st.session_state.pairwise_results:
         winner = match.get("winner", "Tie")
         if winner in win_counts:
