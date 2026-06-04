@@ -18,7 +18,7 @@ def get_client():
     return anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
 
 client = get_client()
-MODEL = "claude-sonnet-4-20250514"
+MODEL = "claude-3-5-sonnet-20240620" # Updated to latest stable model name
 
 # ============ SESSION STATE ============
 if "claude_response" not in st.session_state:
@@ -124,7 +124,16 @@ if st.button("🎯 Evaluate All Responses", type="primary"):
                         response_a=resp_a,
                         name_b=name_b,
                         response_b=resp_b
-                name_b}"
+                    )
+                    try:
+                        result = client.messages.create(
+                            model=MODEL,
+                            max_tokens=1500,
+                            messages=[{"role": "user", "content": p_prompt}]
+                        )
+                        parsed = parse_json_response(result.content[0].text)
+                        if parsed:
+                            parsed["match"] = f"{name_a} vs {name_b}"
                             pairwise_results.append(parsed)
                     except Exception as e:
                         st.error(f"Pairwise error: {e}")
@@ -135,15 +144,20 @@ if st.session_state.evaluation_results:
     st.header("📊 Absolute Scoring Results")
     results = st.session_state.evaluation_results
     
-    # Build dataframe
     metrics = ["Factual Integrity", "Constraint Adherence", "Reasoning Transparency", 
                "Fairness & Bias", "Practical Utility"]
-    metric_keys = ["factual_integrity", "constraint_adher][k] for k in metric_keys],
+    metric_keys = ["factual_integrity", "constraint_adherence", "reasoning_transparency",
+                   "fairness_bias", "practical_utility"]
+    
+    try:
+        data = {
+            "Claude": [results["claude"][k] for k in metric_keys],
+            "ChatGPT": [results["chatgpt"][k] for k in metric_keys],
+            "Gemini": [results["gemini"][k] for k in metric_keys],
         }
         df = pd.DataFrame(data)
         st.dataframe(df, use_container_width=True)
         
-        # Radar chart
         fig = go.Figure()
         for llm in ["Claude", "ChatGPT", "Gemini"]:
             fig.add_trace(go.Scatterpolar(
@@ -159,11 +173,9 @@ if st.session_state.evaluation_results:
         )
         st.plotly_chart(fig, use_container_width=True)
         
-        # Summary
         st.subheader("📝 Summary")
         st.info(results.get("summary", "No summary provided."))
         
-        # Download CSV
         csv = df.to_csv(index=False)
         st.download_button("📥 Download Results (CSV)", csv, "benchmark_results.csv")
     
@@ -172,10 +184,14 @@ if st.session_state.evaluation_results:
         st.json(results)
 
 if st.session_state.pairwise_results:
-    st.header("⚔️ Pairwise Comparison Results (MT-B', 'N/A')}")
+    st.header("⚔️ Pairwise Comparison Results (MT-Bench Style)")
+    
+    for match in st.session_state.pairwise_results:
+        with st.expander(f"Match: {match.get('match', 'Unknown')}"):
+            st.write(f"**Winner:** {match.get('winner', 'Tie')}")
+            st.write(f"**Rationale:** {match.get('rationale', 'N/A')}")
             st.write(f"**Key Differentiator:** {match.get('key_differentiator', 'N/A')}")
     
-    # Win counts
     win_counts = {"Claude": 0, "ChatGPT": 0, "Gemini": 0, "Tie": 0}
     for match in st.session_state.pairwise_results:
         winner = match.get("winner", "Tie")
@@ -186,6 +202,5 @@ if st.session_state.pairwise_results:
     win_df = pd.DataFrame(list(win_counts.items()), columns=["LLM", "Wins"])
     st.bar_chart(win_df.set_index("LLM"))
 
-# ============ FOOTER ============
 st.markdown("---")
 st.caption("Built with Streamlit | Powered by Claude API | Methodology: HELM + MT-Bench")
