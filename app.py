@@ -1,206 +1,117 @@
 import streamlit as st
-import anthropic
 import pandas as pd
 import plotly.graph_objects as go
 from use_cases import USE_CASES
-from evaluator import EVALUATION_PROMPT, PAIRWISE_PROMPT, parse_json_response
 
 # ============ PAGE CONFIG ============
 st.set_page_config(
-    page_title="LLM Benchmark Tool",
-    page_icon="🔬",
+    page_title="Free LLM Benchmarking Tool",
+    page_icon="📊",
     layout="wide"
 )
 
-# ============ API CLIENT ============
-@st.cache_resource
-def get_client():
-    return anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
-
-client = get_client()
-MODEL = "claude-3-5-sonnet-20240620" # Updated to latest stable model name
-
 # ============ SESSION STATE ============
-if "claude_response" not in st.session_state:
-    st.session_state.claude_response = ""
-if "evaluation_results" not in st.session_state:
-    st.session_state.evaluation_results = None
-if "pairwise_results" not in st.session_state:
-    st.session_state.pairwise_results = None
+if "results_df" not in st.session_state:
+    st.session_state.results_df = None
 
 # ============ HEADER ============
-st.title("🔬 HELM-Inspired LLM Benchmarking Tool")
-st.caption("Compare Claude, ChatGPT, and Gemini across three business use cases")
+st.title("📊 LLM Research Dashboard (Manual Entry)")
+st.caption("A tool for researchers to organize and visualize comparisons between Claude, ChatGPT, and Gemini.")
 
 st.markdown("""
-**Methodology:** This tool draws inspiration from Stanford's HELM framework 
-(multi-metric evaluation) and LMSYS's MT-Bench (LLM-as-a-Judge pairwise comparison).
+**Instructions for Free Version:**
+1. Select a use case.
+2. Go to the free websites (**Claude.ai**, **ChatGPT**, and **Gemini**) and run the prompt.
+3. Copy their responses and paste them into the boxes below.
+4. Rate them from 1-10 based on your own observation.
+5. Click **'Generate Comparison Report'**.
 """)
 
 # ============ SIDEBAR ============
-st.sidebar.header("⚙️ Configuration")
+st.sidebar.header("⚙️ Research Settings")
 use_case_name = st.sidebar.selectbox("Select Use Case", list(USE_CASES.keys()))
-eval_mode = st.sidebar.radio(
-    "Evaluation Mode",
-    ["Absolute Scoring (HELM)", "Pairwise Comparison (MT-Bench)", "Both"]
-)
-
 use_case = USE_CASES[use_case_name]
 
-# ============ STEP 1: SHOW PROMPT ============
-st.header("Step 1: Review the Prompt")
-st.text_area("Prompt sent to all LLMs:", use_case["prompt"], height=200, disabled=True)
+# ============ STEP 1: PROMPT PREVIEW ============
+with st.expander("📝 View Prompt to be used on AI Websites", expanded=True):
+    st.text_area("Copy this prompt:", use_case["prompt"], height=150)
 
-# ============ STEP 2: RUN CLAUDE LIVE ============
-st.header("Step 2: Run Claude (Live API)")
+# ============ STEP 2: DATA ENTRY ============
+st.header("Step 1: Input AI Responses & Scores")
+st.info("After running the prompt on the respective websites, paste the text and assign a score (1-10) for each metric.")
 
-if st.button("🚀 Run Claude", type="primary"):
-    with st.spinner("Querying Claude..."):
-        try:
-            response = client.messages.create(
-                model=MODEL,
-                max_tokens=2000,
-                messages=[{"role": "user", "content": use_case["prompt"]}]
-            )
-            st.session_state.claude_response = response.content[0].text
-            st.success("✅ Claude responded!")
-        except Exception as e:
-            st.error(f"Error: {e}")
+col1, col2, col3 = st.columns(3)
 
-if st.session_state.claude_response:
-    st.text_area("Claude's Response:", st.session_state.claude_response, height=250)
+def input_section(col, model_name):
+    with col:
+        st.subheader(f"🤖 {model_name}")
+        resp = st.text_area(f"{model_name} Response:", height=150, key=f"text_{model_name}")
+        st.write(f"**Assign Scores (1-10)**")
+        s1 = st.slider("Factual Integrity", 1, 10, 5, key=f"s1_{model_name}")
+        s2 = st.slider("Constraint Adherence", 1, 10, 5, key=f"s2_{model_name}")
+        s3 = st.slider("Reasoning Transparency", 1, 10, 5, key=f"s3_{model_name}")
+        s4 = st.slider("Fairness & Bias", 1, 10, 5, key=f"s4_{model_name}")
+        s5 = st.slider("Practical Utility", 1, 10, 5, key=f"s5_{model_name}")
+        return {"model": model_name, "text": resp, "scores": [s1, s2, s3, s4, s5]}
 
-# ============ STEP 3: PASTE OTHER RESPONSES ============
-st.header("Step 3: Paste Responses from ChatGPT and Gemini")
+claude_data = input_section(col1, "Claude")
+chatgpt_data = input_section(col2, "ChatGPT")
+gemini_data = input_section(col3, "Gemini")
 
-col1, col2 = st.columns(2)
-with col1:
-    chatgpt_response = st.text_area("ChatGPT Response:", height=250, key="chatgpt")
-with col2:
-    gemini_response = st.text_area("Gemini Response:", height=250, key="gemini")
-
-# ============ STEP 4: EVALUATE ============
-st.header("Step 4: Run Evaluation")
-
-if st.button("🎯 Evaluate All Responses", type="primary"):
-    if not st.session_state.claude_response or not chatgpt_response or not gemini_response:
-        st.warning("⚠️ Please provide all three responses before evaluating.")
-    else:
-        # ABSOLUTE SCORING
-        if eval_mode in ["Absolute Scoring (HELM)", "Both"]:
-            with st.spinner("Running absolute scoring..."):
-                eval_prompt = EVALUATION_PROMPT.format(
-                    use_case=use_case_name,
-                    focus=use_case["focus"],
-                    response_a=st.session_state.claude_response,
-                    response_b=chatgpt_response,
-                    response_c=gemini_response
-                )
-                try:
-                    result = client.messages.create(
-                        model=MODEL,
-                        max_tokens=3000,
-                        messages=[{"role": "user", "content": eval_prompt}]
-                    )
-                    parsed = parse_json_response(result.content[0].text)
-                    st.session_state.evaluation_results = parsed
-                except Exception as e:
-                    st.error(f"Evaluation error: {e}")
-
-        # PAIRWISE COMPARISON
-        if eval_mode in ["Pairwise Comparison (MT-Bench)", "Both"]:
-            with st.spinner("Running pairwise comparisons..."):
-                pairs = [
-                    ("Claude", st.session_state.claude_response, "ChatGPT", chatgpt_response),
-                    ("Claude", st.session_state.claude_response, "Gemini", gemini_response),
-                    ("ChatGPT", chatgpt_response, "Gemini", gemini_response),
-                ]
-                pairwise_results = []
-                for name_a, resp_a, name_b, resp_b in pairs:
-                    p_prompt = PAIRWISE_PROMPT.format(
-                        use_case=use_case_name,
-                        original_prompt=use_case["prompt"],
-                        name_a=name_a,
-                        response_a=resp_a,
-                        name_b=name_b,
-                        response_b=resp_b
-                    )
-                    try:
-                        result = client.messages.create(
-                            model=MODEL,
-                            max_tokens=1500,
-                            messages=[{"role": "user", "content": p_prompt}]
-                        )
-                        parsed = parse_json_response(result.content[0].text)
-                        if parsed:
-                            parsed["match"] = f"{name_a} vs {name_b}"
-                            pairwise_results.append(parsed)
-                    except Exception as e:
-                        st.error(f"Pairwise error: {e}")
-                st.session_state.pairwise_results = pairwise_results
-
-# ============ STEP 5: RESULTS ============
-if st.session_state.evaluation_results:
-    st.header("📊 Absolute Scoring Results")
-    results = st.session_state.evaluation_results
+# ============ STEP 3: GENERATE REPORT ============
+if st.button("🚀 Generate Comparison Report", type="primary"):
+    metrics = ["Factual Integrity", "Constraint Adherence", "Reasoning", "Fairness", "Utility"]
     
-    metrics = ["Factual Integrity", "Constraint Adherence", "Reasoning Transparency", 
-               "Fairness & Bias", "Practical Utility"]
-    metric_keys = ["factual_integrity", "constraint_adherence", "reasoning_transparency",
-                   "fairness_bias", "practical_utility"]
+    data = {
+        "Metric": metrics * 3,
+        "Claude": [claude_data["scores"][0], claude_data["scores"][1], claude_data["scores"][2], claude_data["scores"][3], claude_data["scores"][4]],
+        "ChatGPT": [chatgpt_data["scores"][0], chatgpt_data["scores"][1], chatgpt_data["scores"][2], chatgpt_data["scores"][3], chatgpt_data["scores"][4]],
+        "Gemini": [gemini_data["scores"][0], gemini_data["scores"][1], gemini_data["scores"][2], gemini_data["scores"][3], gemini_data["scores"][4]],
+    }
     
-    try:
-        data = {
-            "Claude": [results["claude"][k] for k in metric_keys],
-            "ChatGPT": [results["chatgpt"][k] for k in metric_keys],
-            "Gemini": [results["gemini"][k] for k in metric_keys],
-        }
-        df = pd.DataFrame(data)
-        st.dataframe(df, use_container_width=True)
+    # Re-formatting for a clean table
+    rows = []
+    for i, m in enumerate(metrics):
+        rows.append({"Metric": m, "Claude": claude_data["scores"][i], "ChatGPT": chatgpt_data["scores"][i], "Gemini": gemini_data["scores"][i]})
+    
+    st.session_state.results_df = pd.DataFrame(rows)
+
+# ============ STEP 4: VISUALIZATION ============
+if st.session_state.results_df is not None:
+    st.divider()
+    st.header("📊 Research Results")
+    
+    df = st.session_state.results_df
+    
+    # Display Table
+    st.subheader("Score Summary Table")
+    st.dataframe(df, use_container_width=True)
+    
+    # Radar Chart
+    st.subheader("Multi-Metric Radar Comparison")
+    fig = go.Figure()
+    
+    for model in ["Claude", "ChatGPT", "Gemini"]:
+        # Prepare data for radar (close the loop by repeating the first score)
+        scores = df[model].tolist()
+        theta = df["Metric"].tolist()
         
-        fig = go.Figure()
-        for llm in ["Claude", "ChatGPT", "Gemini"]:
-            fig.add_trace(go.Scatterpolar(
-                r=df[llm].tolist() + [df[llm].tolist()[0]],
-                theta=metrics + [metrics[0]],
-                fill='toself',
-                name=llm
-            ))
-        fig.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[0, 10])),
-            showlegend=True,
-            title="HELM-Inspired Multi-Metric Comparison"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        fig.add_trace(go.Scatterpolar(
+            r=scores + [scores[0]],
+            theta=theta + [theta[0]],
+            fill='toself',
+            name=model
+        ))
         
-        st.subheader("📝 Summary")
-        st.info(results.get("summary", "No summary provided."))
-        
-        csv = df.to_csv(index=False)
-        st.download_button("📥 Download Results (CSV)", csv, "benchmark_results.csv")
+    fig.update_layout(
+        polar=dict(radialaxis=dict(visible=True, range=[0, 10])),
+        showlegend=True
+    )
+    st.plotly_chart(fig, use_container_width=True)
     
-    except Exception as e:
-        st.error(f"Could not parse results: {e}")
-        st.json(results)
-
-if st.session_state.pairwise_results:
-    st.header("⚔️ Pairwise Comparison Results (MT-Bench Style)")
-    
-    for match in st.session_state.pairwise_results:
-        with st.expander(f"Match: {match.get('match', 'Unknown')}"):
-            st.write(f"**Winner:** {match.get('winner', 'Tie')}")
-            st.write(f"**Rationale:** {match.get('rationale', 'N/A')}")
-            st.write(f"**Key Differentiator:** {match.get('key_differentiator', 'N/A')}")
-    
-    win_counts = {"Claude": 0, "ChatGPT": 0, "Gemini": 0, "Tie": 0}
-    for match in st.session_state.pairwise_results:
-        winner = match.get("winner", "Tie")
-        if winner in win_counts:
-            win_counts[winner] += 1
-    
-    st.subheader("🏆 Overall Win Count")
-    win_df = pd.DataFrame(list(win_counts.items()), columns=["LLM", "Wins"])
-    st.bar_chart(win_df.set_index("LLM"))
+    # Download button
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Download Results as CSV", csv, "llm_research_results.csv", "text/csv")
 
 st.markdown("---")
-st.caption("Built with Streamlit | Powered by Claude API | Methodology: HELM + MT-Bench")
+st.caption("Built for manual research | No API costs | Data stays in your browser")
