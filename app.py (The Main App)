@@ -1,0 +1,51 @@
+import streamlit as st
+import anthropic
+import pandas as pd
+import plotly.graph_objects as go
+from use_cases import USE_CASES
+from evaluator import EVALUATION_PROMPT, PAIRWISE_PROMPT, parse_json_response
+
+# ============ PAGE CONFIG ============
+st.set_page_config(
+    page_title="LLM Benchmark Tool",
+    page_icon="🔬",
+    layout="wide"
+)
+
+# ============ API CLIENT ============
+@st.cache_resource
+def get_client():
+    return anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+
+client = get_client()
+MODEL = "claude-sonnet-4-20250514"
+
+# ============ SESSION STATE ============
+if "claude_response" not in st.session_state:
+    st.session_state.claude_response = ""
+if "evaluation_results" not in st.session_state:
+    st.session_state.evaluation_results = None
+if "pairwise_results" not in st.session_state:
+    st.session_state.pairwise_results = None
+
+# ============ HEADER ============
+st.title("🔬 HELM-Inspired LLM Benchmarking Tool")
+st.caption("Compare Claude, ChatGPT, and Gemini across three business use cases")
+
+st.markdown("""
+**Methodology:** This tool draws inspiration from Stanford's HELM framework 
+(multi-metric evaluation) and LMSYS's MT-Bench (LLM-as-a-Judge pairwise comparison).
+""")
+
+# ============ SIDEBAR ============
+st.sidebar.header("⚙️ Configuration")
+use_case_name = st.sidebar.selectbox("Select Use Case", list(USE_CASES.keys()))
+eval_mode = st.sidebar.radio(
+    "Evaluation Mode",
+    ["Absolute Scoring (HELM)", "Pairwise Comparison (MT-Bench)", "Both"]
+)
+
+use_case = USE_CASES[use_case_name]
+
+# ============ MAIN UI ============
+st
