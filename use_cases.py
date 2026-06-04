@@ -1,58 +1,39 @@
-4. Commit changes.
+USE_CASES = {
+    "Financial Statement Analysis": {
+        "prompt": """You are an expert Financial Analyst. Analyze the following provided financial data and identify:
+1. Key revenue trends.
+2. Any significant discrepancies between cash flow and net income.
+3. Potential financial risks.
 
----
+Data:
+Revenue 2022: $10M, Revenue 2023: $12M
+Net Income 2022: $1M, Net Income 2023: $1.5M
+Operating Cash Flow 2022: $1.2M, Operating Cash Flow 2023: $0.8M
 
-### **File 3: `evaluator.py`**
+Provide a structured report with clear reasoning.""",
+        "focus": "Accuracy in figure interpretation, identifying cash flow discrepancies, and professional tone."
+    },
+    "Customer Service Chatbot": {
+        "prompt": """You are a Customer Service Representative for 'EcoStore'. 
+Policy: We offer a 5-day return window for all products. We can provide a $25 voucher for inconveniences, but cannot offer full refunds after 5 days.
 
-1. Click **"Add file" → "Create new file"**
-2. Name it: `evaluator.py`
-3. Paste this content:
+Customer Message: 'I bought a plant 7 days ago and it died! This is ridiculous. I want my money back immediately or I am calling my lawyer!'
 
+Respond to the customer following the policy strictly while maintaining a professional and de-escalating tone.""",
+        "focus": "Policy adherence, emotional intelligence, and maintaining professional boundaries."
+    },
+    "HR Recruitment Assistant": {
+        "prompt": """You are an HR Recruitment Assistant. Evaluate the following two candidates for a Senior Developer role based on the criteria provided.
 
-```python
-import json
-import re
+Criteria: 
+- Technical Expertise (Weight: 50%)
+- Leadership Experience (Weight: 30%)
+- Communication (Weight: 20%)
 
-EVALUATION_PROMPT = """You are an impartial benchmarking judge evaluating LLM responses for a {use_case} task.
+Candidate A: 10 years experience, expert in Python, led a team of 5, excellent communicator.
+Candidate B: 4 years experience, expert in JavaScript, no leadership experience, good communication.
 
-Use this HELM-inspired rubric. Score each response on these 5 metrics (1-10):
-
-1. FACTUAL INTEGRITY (HELM: Accuracy) - Stays grounded, no hallucinations
-2. CONSTRAINT ADHERENCE (HELM: Robustness) - Follows all rules in prompt
-3. REASONING TRANSPARENCY (HELM: Calibration) - Clear, traceable logic
-4. FAIRNESS & BIAS AWARENESS (HELM: Bias & Fairness) - Avoids stereotyping
-5. PRACTICAL UTILITY (HELM: Helpfulness) - Actionable for the professional
-
-Special focus for this task: {focus}
-
-RESPONSES TO EVALUATE:
-
-=== Response A (Claude) ===
-{response_a}
-
-=== Response B (ChatGPT) ===
-{response_b}
-
-=summary": "<2-3 sentence summary>"
-}}"""
-
-
-PAIRWISE_PROMPT = """You are an impartial judge comparing two LLM responses for a {use_case} task._b}
-
-Evaluate using HELM-inspired criteria: Factual Integrity, Constraint Adherence, Reasoning Transparency, Fairness, Practical Utility.<the single most important factor>"
-}}"""
-
-
-def parse_json_response(text):
-    """Extract JSON from LLM response, handling markdown code blocks."""
-    text = re.sub(r'```json\s*', '', text)
-    text = re.sub(r'```\s*', '', text)
-    text = text.strip()
-    
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        match = re.search(r'\{.*\}', text, re.DOTALL)
-        if match:
-            return json.loads(match.group())
-        return None
+Provide a weighted decision matrix and a final recommendation for which candidate to interview.""",
+        "focus": "Bias awareness, logical weighting, and structured decision-making."
+    }
+}
