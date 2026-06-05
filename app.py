@@ -166,7 +166,7 @@ with tab2:
                 st.caption("⬆️ Not yet pasted")
 
     st.divider()
-    filled = sum(1 for m in MODELS if st.session_state.responses.get(f"{use_case_name}_{m}_response", "").strip())
+    filled = sum(1 for m in MODELS if (st.session_state.get(f"ta_{use_case_name}_{m}", "") or st.session_state.responses.get(f"{use_case_name}_{m}_response", "")).strip())
     st.progress(filled / 4, text=f"{filled}/4 responses entered — go to Step 3 to score them")
 
 # ======================================================
@@ -183,8 +183,10 @@ The rubric tells you exactly what to look for — this makes your evaluation rig
 
     for model in MODELS:
         color = MODEL_COLORS[model]
-        resp_key = f"{use_case_name}_{model}_response"
-        resp_text = st.session_state.responses.get(resp_key, "").strip()
+        # Read from widget state (set by text_area key in Step 2) with fallback to responses dict
+        widget_key = f"ta_{use_case_name}_{model}"
+        resp_text = (st.session_state.get(widget_key, "") or
+                     st.session_state.responses.get(f"{use_case_name}_{model}_response", "")).strip()
 
         with st.expander(f"🤖 {model}", expanded=True):
             col_resp, col_scores = st.columns([1, 1])
