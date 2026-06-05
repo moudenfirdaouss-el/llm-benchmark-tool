@@ -1,11 +1,12 @@
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px  # Added for the Bar Chart
 from use_cases import USE_CASES
 
 # ============ PAGE CONFIG ============
 st.set_page_config(
-    page_title="Free LLM Benchmarking Tool",
+    page_title="LLM Research Dashboard",
     page_icon="📊",
     layout="wide"
 )
@@ -16,15 +17,13 @@ if "results_df" not in st.session_state:
 
 # ============ HEADER ============
 st.title("📊 LLM Research Dashboard (Manual Entry)")
-st.caption("A tool for researchers to organize and visualize comparisons between Claude, ChatGPT, and Gemini.")
+st.caption("A professional tool to organize and visualize comparisons between Claude, ChatGPT, and Gemini.")
 
 st.markdown("""
-**Instructions for Free Version:**
-1. Select a use case.
-2. Go to the free websites (**Claude.ai**, **ChatGPT**, and **Gemini**) and run the prompt.
-3. Copy their responses and paste them into the boxes below.
-4. Rate them from 1-10 based on your own observation.
-5. Click **'Generate Comparison Report'**.
+**How to use this tool for free:**
+1. **Run the Prompt:** Copy the prompt below and paste it into the free versions of Claude.ai, ChatGPT, and Gemini.
+2. **Input Data:** Paste their responses into the boxes and rate them (1-10) based on your observation.
+3. **Analyze:** Click 'Generate Report' to see professional visualizations.
 """)
 
 # ============ SIDEBAR ============
@@ -33,12 +32,12 @@ use_case_name = st.sidebar.selectbox("Select Use Case", list(USE_CASES.keys()))
 use_case = USE_CASES[use_case_name]
 
 # ============ STEP 1: PROMPT PREVIEW ============
-with st.expander("📝 View Prompt to be used on AI Websites", expanded=True):
-    st.text_area("Copy this prompt:", use_case["prompt"], height=150)
+with st.expander("📝 Step 1: Copy Prompt for AI Websites", expanded=True):
+    st.text_area("Use this exact prompt:", use_case["prompt"], height=150)
 
 # ============ STEP 2: DATA ENTRY ============
-st.header("Step 1: Input AI Responses & Scores")
-st.info("After running the prompt on the respective websites, paste the text and assign a score (1-10) for each metric.")
+st.header("Step 2: Input Responses & Scores")
+st.info("Paste the text from the AI websites and assign a score (1-10) for each metric.")
 
 col1, col2, col3 = st.columns(3)
 
@@ -62,35 +61,35 @@ gemini_data = input_section(col3, "Gemini")
 if st.button("🚀 Generate Comparison Report", type="primary"):
     metrics = ["Factual Integrity", "Constraint Adherence", "Reasoning", "Fairness", "Utility"]
     
-    data = {
-        "Metric": metrics * 3,
-        "Claude": [claude_data["scores"][0], claude_data["scores"][1], claude_data["scores"][2], claude_data["scores"][3], claude_data["scores"][4]],
-        "ChatGPT": [chatgpt_data["scores"][0], chatgpt_data["scores"][1], chatgpt_data["scores"][2], chatgpt_data["scores"][3], chatgpt_data["scores"][4]],
-        "Gemini": [gemini_data["scores"][0], gemini_data["scores"][1], gemini_data["scores"][2], gemini_data["scores"][3], gemini_data["scores"][4]],
-    }
-    
-    # Re-formatting for a clean table
+    # Create rows for the dataframe
     rows = []
     for i, m in enumerate(metrics):
-        rows.append({"Metric": m, "Claude": claude_data["scores"][i], "ChatGPT": chatgpt_data["scores"][i], "Gemini": gemini_data["scores"][i]})
+        rows.append({
+            "Metric": m, 
+            "Claude": claude_data["scores"][i], 
+            "ChatGPT": chatgpt_data["scores"][i], 
+            "Gemini": gemini_data["scores"][i]
+        })
     
     st.session_state.results_df = pd.DataFrame(rows)
 
 # ============ STEP 4: VISUALIZATION ============
 if st.session_state.results_df is not None:
     st.divider()
-    st.header("📊 Research Results")
-    
+    st.header("📊 Research Results")    
     df = st.session_state.results_df
     
-    # Display Table
+    # 1. Display Table
     st.subheader("Score Summary Table")
     st.dataframe(df, use_container_width=True)
     
-    # Grouped Bar Chart
+    # 2. Grouped Bar Chart (The preferred alternative)
     st.subheader("Side-by-Side Metric Comparison")
-    # Melt the dataframe to make it "Long Format" for Plotly
+    # Melt the dataframe to make it "Long Format" (required by plotly express)
     df_melted = df.melt(id_vars="Metric", var_name="Model", value_name="Score")
+    
+    # Define colors for each model to look professional
+    color_map = {"Claude": "#D97757", "ChatGPT": "#10A37F", "Gemini": "#4285F4"}
     
     fig = px.bar(
         df_melted, 
@@ -98,14 +97,21 @@ if st.session_state.results_df is not None:
         y="Score", 
         color="Model", 
         barmode="group",
-        color_discrete_map={"Claude": "#D97757", "ChatGPT": "#10A37F", "Gemini": "#4285F4"}
+        color_discrete_map=color_map,
+        text_auto=True # Shows the numbers on top of bars
     )
-    fig.update_layout(yaxis_range=[0, 10])
+    fig.update_layout(
+        yaxis_range=[0, 12], # Give a little room at the top
+        legend_title_text='AI Model',
+        xaxis_title="",
+        yaxis_title="Score (1-10)"
+    )
     st.plotly_chart(fig, use_container_width=True)
     
-    # Download button
+    # 3. Download button
+    st.subheader("📥 Export Data")
     csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Download Results as CSV", csv, "llm_research_results.csv", "text/csv")
+    st.download_button("Download Results as CSV", csv, "llm_research_results.csv", "text/csv")
 
 st.markdown("---")
-st.caption("Built for manual research | No API costs | Data stays in your browser")
+st.caption("Built for manual research | Zero API Cost | No Secrets Required")
