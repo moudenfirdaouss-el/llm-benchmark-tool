@@ -383,7 +383,7 @@ with tab4:
                         if val >= 3: return "background-color:#fff3cd; color:#856404"
                         return "background-color:#f8d7da; color:#721c24"
 
-                    styled = df.set_index("Criterion").style.applymap(color_score, subset=MODELS).format("{:.0f}", na_rep="—")
+                    styled = df.set_index("Criterion").style.map(color_score, subset=MODELS).format("{:.0f}", na_rep="—")
                     st.dataframe(styled, use_container_width=True, height=len(crit_keys)*38+40)
 
                     # Winner for this use case
