@@ -2,9 +2,6 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-import anthropic
-import json
-import re
 from use_cases import USE_CASES
 
 # ============ PAGE CONFIG ============
@@ -20,39 +17,50 @@ st.markdown("""
     .metric-card {
         background: #f8f9fa;
         border-radius: 10px;
-        padding: 15px;
+        padding: 18px;
         text-align: center;
         border: 1px solid #e0e0e0;
     }
-    .winner-card {
-        background: linear-gradient(135deg, #fff8e1, #fff3cd);
-        border: 2px solid #ffc107;
-        border-radius: 12px;
-        padding: 20px;
-        text-align: center;
-    }
-    .rank-badge {
-        display: inline-block;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-weight: bold;
+    .rubric-box {
+        background: #f0f4ff;
+        border-left: 3px solid #4B6BFB;
+        border-radius: 0 8px 8px 0;
+        padding: 10px 14px;
+        margin-bottom: 8px;
         font-size: 13px;
     }
-    .stAlert {
+    .score-chip {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        margin: 2px;
+    }
+    .response-card {
+        border: 1px solid #e0e0e0;
         border-radius: 10px;
+        padding: 14px;
+        background: #fafafa;
+        min-height: 200px;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+    .section-header {
+        font-size: 13px;
+        font-weight: 600;
+        color: #555;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
     }
 </style>
 """, unsafe_allow_html=True)
 
 # ============ SESSION STATE ============
-if "scores" not in st.session_state:
-    st.session_state.scores = {}
-if "analysis" not in st.session_state:
-    st.session_state.analysis = {}
-if "responses" not in st.session_state:
-    st.session_state.responses = {}
-if "scored" not in st.session_state:
-    st.session_state.scored = False
+for key in ["scores", "responses", "notes"]:
+    if key not in st.session_state:
+        st.session_state[key] = {}
 
 MODELS = ["Claude", "ChatGPT", "Gemini", "Llama"]
 MODEL_COLORS = {
@@ -62,302 +70,330 @@ MODEL_COLORS = {
     "Llama": "#7C3AED"
 }
 
-# ============ HEADER ============
-st.title("📊 LLM Benchmarking Dashboard")
-st.caption("HELM-inspired evaluation of Claude · ChatGPT · Gemini · Llama across three business use cases")
+SCORE_RUBRIC = {
+    1: "Poor — fails to meet the criterion",
+    2: "Below average — partial or weak attempt",
+    3: "Adequate — meets the criterion at a basic level",
+    4: "Good — clearly meets the criterion with minor gaps",
+    5: "Excellent — fully meets the criterion with depth and precision"
+}
 
 # ============ SIDEBAR ============
 with st.sidebar:
-    st.header("⚙️ Settings")
-    api_key = st.text_input("Anthropic API Key", type="password",
-                             help="Required for AI-powered auto-scoring. Get one at console.anthropic.com")
+    st.markdown("## ⚙️ Settings")
+    use_case_name = st.selectbox("Use case", list(USE_CASES.keys()))
     st.divider()
-    st.markdown("**How to use:**")
+    st.markdown("**Scoring scale:**")
+    for score, label in SCORE_RUBRIC.items():
+        color = ["#dc3545","#fd7e14","#ffc107","#28a745","#0d6efd"][score-1]
+        st.markdown(f"<span style='color:{color}; font-weight:600'>{score}</span> — {label.split('—')[1].strip()}", unsafe_allow_html=True)
+    st.divider()
+    st.markdown("**Workflow:**")
     st.markdown("""
-1. Select a use case
-2. Copy the prompt → run in each LLM
-3. Paste all four responses
-4. Click **Auto-Score** (uses Claude to evaluate)
-5. View the full results dashboard
+1. Copy the prompt (Step 1)
+2. Paste all 4 LLM responses (Step 2)
+3. Score each response per criterion (Step 3)
+4. View the Results Dashboard
+5. Export for your paper
     """)
     st.divider()
-    st.markdown("**Models compared:**")
+    st.markdown("**Models:**")
     for m, c in MODEL_COLORS.items():
         st.markdown(f"<span style='color:{c}'>■</span> {m}", unsafe_allow_html=True)
 
+uc = USE_CASES[use_case_name]
+
+# ============ HEADER ============
+st.title("📊 LLM Benchmarking Dashboard")
+st.caption(f"HELM-inspired evaluation · {use_case_name} · Claude · ChatGPT · Gemini · Llama")
+
 # ============ TABS ============
-tab1, tab2, tab3 = st.tabs(["📝 Input & Scoring", "📊 Results Dashboard", "📄 Export Report"])
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📋 Step 1 — Prompt",
+    "📝 Step 2 — Responses",
+    "⭐ Step 3 — Score",
+    "📊 Results & Export"
+])
 
-# ============ TAB 1: INPUT ============
+# ======================================================
+# TAB 1: PROMPT
+# ======================================================
 with tab1:
-    use_case_name = st.selectbox("Select Use Case", list(USE_CASES.keys()),
-                                  help="Each use case uses its own domain-specific evaluation criteria")
-    uc = USE_CASES[use_case_name]
+    st.subheader("Use case prompt")
+    st.info("Copy this exact prompt and run it in **Claude.ai**, **ChatGPT**, **Gemini**, and **Llama** (llama.com or Perplexity). Then paste each response in Step 2.")
 
-    with st.expander("📋 Prompt to run in each LLM", expanded=True):
-        st.code(uc["prompt"], language=None)
-        st.caption("Copy this exact prompt and run it in Claude.ai, ChatGPT, Gemini, and Llama.")
-
-    with st.expander("🎯 Evaluation criteria for this use case", expanded=False):
-        cols = st.columns(len(uc["criteria"]))
-        for i, (c, desc) in enumerate(uc["criteria"].items()):
-            with cols[i]:
-                st.markdown(f"**{c}**")
-                st.caption(desc)
-
-    st.subheader("Paste LLM Responses")
-    st.info("Paste each model's response below. Claude's response will be generated automatically if you provide an API key and leave it blank.")
-
-    response_inputs = {}
-    cols = st.columns(4)
-    for i, model in enumerate(MODELS):
-        with cols[i]:
-            color = MODEL_COLORS[model]
-            st.markdown(f"<p style='color:{color}; font-weight:600; font-size:16px;'>🤖 {model}</p>", unsafe_allow_html=True)
-            if model == "Claude":
-                st.caption("Leave blank to auto-generate via API")
-            response_inputs[model] = st.text_area(
-                f"{model} response",
-                value=st.session_state.responses.get(f"{use_case_name}_{model}", ""),
-                height=200,
-                key=f"resp_{use_case_name}_{model}",
-                label_visibility="collapsed"
-            )
+    st.code(uc["prompt"], language=None)
 
     st.divider()
-    col_btn1, col_btn2 = st.columns([1, 3])
-    with col_btn1:
-        score_btn = st.button("🚀 Auto-Score All", type="primary", use_container_width=True,
-                              help="Uses Claude via API to score each response on all criteria")
-    with col_btn2:
-        if not api_key:
-            st.warning("⚠️ Add your Anthropic API key in the sidebar to enable auto-scoring.")
+    st.subheader("Evaluation criteria for this use case")
+    cols = st.columns(3)
+    for i, (crit, desc) in enumerate(uc["criteria"].items()):
+        with cols[i % 3]:
+            st.markdown(f"""
+            <div style="border:1px solid #e0e0e0; border-radius:8px; padding:12px; margin-bottom:10px; background:#fff;">
+                <div style="font-weight:600; font-size:14px; margin-bottom:4px;">{crit}</div>
+                <div style="font-size:12px; color:#666;">{desc}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-    if score_btn:
-        if not api_key:
-            st.error("Please enter your Anthropic API key in the sidebar.")
-        else:
-            client = anthropic.Anthropic(api_key=api_key)
-            progress = st.progress(0, text="Starting evaluation...")
-            total = len(MODELS)
-
-            for idx, model in enumerate(MODELS):
-                progress.progress((idx) / total, text=f"Scoring {model}...")
-                resp_text = response_inputs[model].strip()
-
-                # Auto-generate Claude's response if blank
-                if model == "Claude" and not resp_text:
-                    with st.spinner("Generating Claude's response..."):
-                        gen = client.messages.create(
-                            model="claude-opus-4-5",
-                            max_tokens=800,
-                            messages=[{"role": "user", "content": uc["prompt"]}]
-                        )
-                        resp_text = gen.content[0].text
-                        st.session_state.responses[f"{use_case_name}_Claude"] = resp_text
-
-                if not resp_text:
-                    st.warning(f"No response for {model} — skipping.")
-                    continue
-
-                # Build scoring prompt
-                criteria_str = "\n".join([f"- {k}: {v}" for k, v in uc["criteria"].items()])
-                score_prompt = f"""You are a rigorous AI evaluation expert applying HELM-inspired methodology.
-
-Use case: {use_case_name}
-Scoring criteria (rate each 1–5):
-{criteria_str}
-
-Response to evaluate (from {model}):
-\"\"\"{resp_text[:1500]}\"\"\"
-
-Return ONLY a valid JSON object with these exact keys and integer scores 1-5:
-{json.dumps({k: 0 for k in uc["criteria"].keys()})}
-
-No explanation. No markdown. Only the JSON."""
-
-                try:
-                    result = client.messages.create(
-                        model="claude-opus-4-5",
-                        max_tokens=500,
-                        messages=[{"role": "user", "content": score_prompt}]
-                    )
-                    raw = result.content[0].text.strip()
-                    raw = re.sub(r"```json|```", "", raw).strip()
-                    parsed = json.loads(raw)
-                    st.session_state.scores[f"{use_case_name}_{model}"] = parsed
-                except Exception as e:
-                    st.error(f"Scoring failed for {model}: {e}")
-
-            # Generate narrative analysis
-            progress.progress(0.9, text="Generating analysis...")
-            score_summary = ""
-            for model in MODELS:
-                key = f"{use_case_name}_{model}"
-                if key in st.session_state.scores:
-                    s = st.session_state.scores[key]
-                    avg = sum(s.values()) / len(s)
-                    score_summary += f"\n{model}: avg {avg:.1f}/5, detail: {s}"
-
-            analysis_prompt = f"""You are an AI benchmarking expert writing for an academic seminar paper.
-
-Use case: {use_case_name}
-Scores:{score_summary}
-
-Write a concise analytical paragraph (5–6 sentences) comparing the four LLMs on this use case. 
-Mention which model performed best and why, note specific strengths and weaknesses by criterion, 
-and give a business deployment recommendation. Be specific and data-driven."""
-
-            try:
-                ana = client.messages.create(
-                    model="claude-opus-4-5",
-                    max_tokens=500,
-                    messages=[{"role": "user", "content": analysis_prompt}]
-                )
-                st.session_state.analysis[use_case_name] = ana.content[0].text
-            except Exception as e:
-                st.session_state.analysis[use_case_name] = f"Analysis generation failed: {e}"
-
-            progress.progress(1.0, text="Done!")
-            st.session_state.scored = True
-            st.success("✅ Scoring complete! Go to the Results Dashboard tab.")
-            st.rerun()
-
-# ============ TAB 2: RESULTS ============
+# ======================================================
+# TAB 2: RESPONSES
+# ======================================================
 with tab2:
-    all_scores = st.session_state.scores
-    if not all_scores:
-        st.info("Run auto-scoring in the Input tab first to see results here.")
+    st.subheader("Paste the four LLM responses")
+    st.caption("Paste each model's exact response to the prompt above. You can save and come back — responses are kept in memory during your session.")
+
+    cols = st.columns(2)
+    for i, model in enumerate(MODELS):
+        with cols[i % 2]:
+            color = MODEL_COLORS[model]
+            st.markdown(f"<p style='color:{color}; font-weight:700; font-size:15px; margin-bottom:4px;'>🤖 {model}</p>", unsafe_allow_html=True)
+            key = f"{use_case_name}_{model}_response"
+            val = st.session_state.responses.get(key, "")
+            new_val = st.text_area(
+                f"{model} response",
+                value=val,
+                height=220,
+                placeholder=f"Paste {model}'s response here...",
+                key=f"ta_{use_case_name}_{model}",
+                label_visibility="collapsed"
+            )
+            st.session_state.responses[key] = new_val
+            if new_val.strip():
+                wc = len(new_val.split())
+                st.caption(f"✅ {wc} words")
+            else:
+                st.caption("⬆️ Not yet pasted")
+
+    st.divider()
+    filled = sum(1 for m in MODELS if st.session_state.responses.get(f"{use_case_name}_{m}_response", "").strip())
+    st.progress(filled / 4, text=f"{filled}/4 responses entered — go to Step 3 to score them")
+
+# ======================================================
+# TAB 3: SCORING
+# ======================================================
+with tab3:
+    st.subheader("Score each response")
+    st.info("""
+**How to score:** Read each model's response (shown below), then rate it 1–5 per criterion using the rubric shown next to each slider.
+The rubric tells you exactly what to look for — this makes your evaluation rigorous and defensible for your paper.
+    """)
+
+    criteria_list = list(uc["criteria"].keys())
+
+    for model in MODELS:
+        color = MODEL_COLORS[model]
+        resp_key = f"{use_case_name}_{model}_response"
+        resp_text = st.session_state.responses.get(resp_key, "").strip()
+
+        with st.expander(f"🤖 {model}", expanded=True):
+            col_resp, col_scores = st.columns([1, 1])
+
+            with col_resp:
+                st.markdown("<div class='section-header'>Response</div>", unsafe_allow_html=True)
+                if resp_text:
+                    st.markdown(f"""
+                    <div class="response-card" style="border-top: 3px solid {color};">
+                        {resp_text[:1800].replace(chr(10), '<br>')}{'...' if len(resp_text) > 1800 else ''}
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.warning("No response pasted yet — go to Step 2 first.")
+
+            with col_scores:
+                st.markdown("<div class='section-header'>Scores (1–5)</div>", unsafe_allow_html=True)
+                model_scores = {}
+                for crit in criteria_list:
+                    crit_desc = uc["criteria"][crit]
+                    score_key = f"{use_case_name}_{model}_{crit}"
+                    saved = st.session_state.scores.get(score_key, 3)
+
+                    st.markdown(f"""
+                    <div class="rubric-box">
+                        <strong>{crit}</strong><br>
+                        <span style="color:#555;">{crit_desc}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                    score = st.select_slider(
+                        f"{crit}",
+                        options=[1, 2, 3, 4, 5],
+                        value=saved,
+                        format_func=lambda x: f"{x} — {SCORE_RUBRIC[x].split('—')[1].strip()}",
+                        key=f"slider_{use_case_name}_{model}_{crit}",
+                        label_visibility="collapsed"
+                    )
+                    st.session_state.scores[score_key] = score
+                    model_scores[crit] = score
+
+                if model_scores:
+                    avg = sum(model_scores.values()) / len(model_scores)
+                    chip_color = "#28a745" if avg >= 4 else "#ffc107" if avg >= 3 else "#dc3545"
+                    st.markdown(f"""
+                    <div style="margin-top:12px; text-align:right;">
+                        <span class="score-chip" style="background:{chip_color}22; color:{chip_color}; border:1px solid {chip_color}66; font-size:14px; padding:5px 16px;">
+                            Average: {avg:.2f} / 5
+                        </span>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                # Optional qualitative note
+                note_key = f"{use_case_name}_{model}_note"
+                note = st.text_area(
+                    "Qualitative observation (optional — use for your paper)",
+                    value=st.session_state.notes.get(note_key, ""),
+                    height=60,
+                    placeholder="e.g. 'Response was fluent but introduced an unsupported refund guarantee'",
+                    key=f"note_{use_case_name}_{model}",
+                    label_visibility="visible"
+                )
+                st.session_state.notes[note_key] = note
+
+        st.divider()
+
+# ======================================================
+# TAB 4: RESULTS & EXPORT
+# ======================================================
+with tab4:
+    # Check if any scores exist
+    all_scores_flat = st.session_state.scores
+    has_data = any(
+        all_scores_flat.get(f"{uc_n}_{m}_{c}")
+        for uc_n, uc_d in USE_CASES.items()
+        for m in MODELS
+        for c in uc_d["criteria"]
+    )
+
+    if not has_data:
+        st.info("Score at least one use case in Step 3 to see results here.")
     else:
-        # ---- Overall scores across all use cases ----
+        # ---- Build score matrix ----
+        def get_score(uc_n, model, crit):
+            return all_scores_flat.get(f"{uc_n}_{model}_{crit}", None)
+
+        def get_avg(uc_n, model):
+            vals = [get_score(uc_n, model, c) for c in USE_CASES[uc_n]["criteria"] if get_score(uc_n, model, c) is not None]
+            return round(sum(vals)/len(vals), 2) if vals else None
+
+        def get_overall(model):
+            vals = []
+            for uc_n, uc_d in USE_CASES.items():
+                for c in uc_d["criteria"]:
+                    s = get_score(uc_n, model, c)
+                    if s is not None:
+                        vals.append(s)
+            return round(sum(vals)/len(vals), 2) if vals else None
+
+        # ---- Overall Rankings ----
         st.subheader("🏆 Overall Rankings")
-
-        overall = {m: [] for m in MODELS}
-        for key, scores_dict in all_scores.items():
-            for m in MODELS:
-                if key.endswith(f"_{m}"):
-                    overall[m].extend(scores_dict.values())
-
-        overall_avg = {m: (sum(v)/len(v) if v else 0) for m, v in overall.items()}
-        ranked = sorted(overall_avg.items(), key=lambda x: x[1], reverse=True)
+        overall_avgs = {m: get_overall(m) for m in MODELS}
+        ranked = sorted([(m, v) for m, v in overall_avgs.items() if v is not None], key=lambda x: x[1], reverse=True)
 
         rank_emojis = ["🥇", "🥈", "🥉", "4️⃣"]
-        cols = st.columns(4)
+        cols = st.columns(len(ranked))
         for i, (model, avg) in enumerate(ranked):
             with cols[i]:
                 color = MODEL_COLORS[model]
                 st.markdown(f"""
                 <div class="metric-card" style="border-top: 4px solid {color};">
-                    <div style="font-size:28px">{rank_emojis[i]}</div>
-                    <div style="font-size:20px; font-weight:700; color:{color}">{model}</div>
-                    <div style="font-size:32px; font-weight:800">{avg:.2f}</div>
-                    <div style="color:#888; font-size:13px">overall avg / 5</div>
+                    <div style="font-size:26px;">{rank_emojis[i]}</div>
+                    <div style="font-size:18px; font-weight:700; color:{color}; margin:4px 0;">{model}</div>
+                    <div style="font-size:30px; font-weight:800;">{avg:.2f}</div>
+                    <div style="color:#888; font-size:12px;">overall avg / 5</div>
                 </div>
                 """, unsafe_allow_html=True)
 
         st.divider()
 
-        # ---- Radar chart ----
+        # ---- Charts row ----
         col_radar, col_bar = st.columns([1, 1])
 
         with col_radar:
-            st.subheader("📡 Radar — by Use Case")
-            use_case_avgs = {m: [] for m in MODELS}
-            uc_labels = []
-            for uc_name in USE_CASES.keys():
-                uc_labels.append(uc_name.replace(" ", "\n"))
-                for m in MODELS:
-                    key = f"{uc_name}_{m}"
-                    if key in all_scores:
-                        s = all_scores[key]
-                        use_case_avgs[m].append(round(sum(s.values())/len(s), 2))
-                    else:
-                        use_case_avgs[m].append(0)
-
+            st.subheader("📡 Radar — by use case")
+            uc_labels = list(USE_CASES.keys())
+            short_labels = [u.replace(" ", "\n") for u in uc_labels]
             fig_radar = go.Figure()
             for model in MODELS:
-                vals = use_case_avgs[model]
+                vals = [get_avg(uc_n, model) or 0 for uc_n in uc_labels]
                 fig_radar.add_trace(go.Scatterpolar(
                     r=vals + [vals[0]],
-                    theta=uc_labels + [uc_labels[0]],
+                    theta=short_labels + [short_labels[0]],
                     fill='toself',
                     name=model,
                     line_color=MODEL_COLORS[model],
                     fillcolor=MODEL_COLORS[model],
-                    opacity=0.2
+                    opacity=0.18
                 ))
             fig_radar.update_layout(
-                polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
+                polar=dict(radialaxis=dict(visible=True, range=[0, 5], tickfont=dict(size=10))),
                 showlegend=True,
-                height=380,
-                margin=dict(t=20, b=20, l=20, r=20)
+                height=360,
+                margin=dict(t=10, b=10, l=10, r=10),
+                legend=dict(font=dict(size=12))
             )
             st.plotly_chart(fig_radar, use_container_width=True)
 
         with col_bar:
-            st.subheader("📊 Overall Average Score")
-            fig_bar = go.Figure()
+            st.subheader("📊 Overall average score")
             sorted_models = [m for m, _ in ranked]
-            fig_bar.add_trace(go.Bar(
+            fig_bar = go.Figure(go.Bar(
                 x=sorted_models,
-                y=[overall_avg[m] for m in sorted_models],
+                y=[overall_avgs[m] or 0 for m in sorted_models],
                 marker_color=[MODEL_COLORS[m] for m in sorted_models],
-                text=[f"{overall_avg[m]:.2f}" for m in sorted_models],
-                textposition="outside"
+                text=[f"{overall_avgs[m]:.2f}" for m in sorted_models],
+                textposition="outside",
+                width=0.5
             ))
             fig_bar.update_layout(
-                yaxis=dict(range=[0, 5.5], title="Average Score (out of 5)"),
+                yaxis=dict(range=[0, 5.8], title="Score (out of 5)"),
                 xaxis_title="",
-                height=380,
+                height=360,
                 showlegend=False,
-                margin=dict(t=20, b=20)
+                margin=dict(t=10, b=10)
             )
             st.plotly_chart(fig_bar, use_container_width=True)
 
         st.divider()
 
         # ---- Per use case breakdown ----
-        st.subheader("🔍 Breakdown by Use Case & Criteria")
+        st.subheader("🔍 Breakdown by use case and criterion")
 
-        for uc_name, uc_data in USE_CASES.items():
-            keys_present = [f"{uc_name}_{m}" for m in MODELS if f"{uc_name}_{m}" in all_scores]
-            if not keys_present:
+        for uc_n, uc_d in USE_CASES.items():
+            crit_keys = list(uc_d["criteria"].keys())
+            has_uc_data = any(get_score(uc_n, m, c) is not None for m in MODELS for c in crit_keys)
+            if not has_uc_data:
                 continue
 
-            with st.expander(f"📁 {uc_name}", expanded=True):
-                criteria_list = list(uc_data["criteria"].keys())
-
-                # Build DataFrame
+            with st.expander(f"📁 {uc_n}", expanded=True):
+                # Build df
                 rows = []
-                for criterion in criteria_list:
-                    row = {"Criterion": criterion}
+                for c in crit_keys:
+                    row = {"Criterion": c}
                     for m in MODELS:
-                        key = f"{uc_name}_{m}"
-                        row[m] = all_scores.get(key, {}).get(criterion, None)
+                        row[m] = get_score(uc_n, m, c)
                     rows.append(row)
                 df = pd.DataFrame(rows)
 
-                col_tbl, col_chart = st.columns([1, 1.5])
+                col_tbl, col_chart = st.columns([1, 1.6])
 
                 with col_tbl:
-                    # Styled table
                     def color_score(val):
-                        if val is None:
-                            return ""
-                        if val >= 4:
-                            return "background-color: #d4edda; color: #155724"
-                        elif val >= 3:
-                            return "background-color: #fff3cd; color: #856404"
-                        else:
-                            return "background-color: #f8d7da; color: #721c24"
+                        if val is None: return ""
+                        if val >= 4: return "background-color:#d4edda; color:#155724"
+                        if val >= 3: return "background-color:#fff3cd; color:#856404"
+                        return "background-color:#f8d7da; color:#721c24"
 
-                    styled = df.set_index("Criterion").style.applymap(
-                        color_score, subset=MODELS
-                    ).format("{:.0f}", na_rep="—")
-                    st.dataframe(styled, use_container_width=True)
+                    styled = df.set_index("Criterion").style.applymap(color_score, subset=MODELS).format("{:.0f}", na_rep="—")
+                    st.dataframe(styled, use_container_width=True, height=len(crit_keys)*38+40)
+
+                    # Winner for this use case
+                    uc_avgs = {m: get_avg(uc_n, m) for m in MODELS}
+                    valid = {m: v for m, v in uc_avgs.items() if v is not None}
+                    if valid:
+                        winner = max(valid, key=lambda m: valid[m])
+                        st.success(f"**Best in this use case:** {winner} ({valid[winner]:.2f}/5)")
 
                 with col_chart:
-                    # Grouped bar chart per criterion
                     df_melt = df.melt(id_vars="Criterion", var_name="Model", value_name="Score").dropna()
                     fig_uc = px.bar(
                         df_melt, x="Criterion", y="Score", color="Model",
@@ -366,77 +402,93 @@ with tab2:
                         text_auto=True
                     )
                     fig_uc.update_layout(
-                        yaxis=dict(range=[0, 5.5], title="Score (1–5)"),
+                        yaxis=dict(range=[0, 5.8], title="Score (1–5)"),
                         xaxis_title="",
-                        legend_title="Model",
-                        height=280,
+                        height=300,
                         margin=dict(t=10, b=10),
-                        xaxis_tickangle=-20
+                        xaxis_tickangle=-25,
+                        legend=dict(font=dict(size=11))
                     )
                     st.plotly_chart(fig_uc, use_container_width=True)
 
-                # Narrative analysis
-                if uc_name in st.session_state.analysis:
-                    st.markdown("**🧠 AI-generated analysis:**")
-                    st.info(st.session_state.analysis[uc_name])
+                # Qualitative notes
+                notes_for_uc = {m: st.session_state.notes.get(f"{uc_n}_{m}_note", "") for m in MODELS}
+                if any(notes_for_uc.values()):
+                    st.markdown("**Qualitative observations:**")
+                    for m, note in notes_for_uc.items():
+                        if note.strip():
+                            st.markdown(f"<span style='color:{MODEL_COLORS[m]};font-weight:600;'>{m}:</span> {note}", unsafe_allow_html=True)
 
         st.divider()
 
-        # ---- Heatmap ----
-        st.subheader("🌡️ Full Criteria Heatmap (all use cases)")
+        # ---- Full heatmap ----
+        st.subheader("🌡️ Complete criteria heatmap")
         heat_rows = []
-        for uc_name, uc_data in USE_CASES.items():
-            for criterion in uc_data["criteria"].keys():
-                row = {"Use Case + Criterion": f"{uc_name[:12]}… | {criterion}"}
-                for m in MODELS:
-                    key = f"{uc_name}_{m}"
-                    row[m] = all_scores.get(key, {}).get(criterion, None)
+        y_labels = []
+        for uc_n, uc_d in USE_CASES.items():
+            for c in uc_d["criteria"]:
+                row = [get_score(uc_n, m, c) for m in MODELS]
                 heat_rows.append(row)
+                y_labels.append(f"{uc_n[:14]}… | {c}")
 
-        heat_df = pd.DataFrame(heat_rows).set_index("Use Case + Criterion")
-        fig_heat = go.Figure(data=go.Heatmap(
-            z=heat_df[MODELS].values.tolist(),
+        fig_heat = go.Figure(go.Heatmap(
+            z=heat_rows,
             x=MODELS,
-            y=heat_df.index.tolist(),
-            colorscale=[[0, "#f8d7da"], [0.5, "#fff3cd"], [1, "#d4edda"]],
+            y=y_labels,
+            colorscale=[[0,"#f8d7da"],[0.25,"#fd7e14"],[0.5,"#fff3cd"],[0.75,"#8bc34a"],[1,"#d4edda"]],
             zmin=1, zmax=5,
-            text=heat_df[MODELS].values.tolist(),
+            text=heat_rows,
             texttemplate="%{text}",
             showscale=True,
-            colorbar=dict(title="Score")
+            colorbar=dict(title="Score", tickvals=[1,2,3,4,5])
         ))
-        fig_heat.update_layout(height=max(300, len(heat_rows) * 28), margin=dict(l=200, t=10, b=10))
+        fig_heat.update_layout(
+            height=max(320, len(heat_rows) * 30 + 60),
+            margin=dict(l=220, t=20, b=20, r=20),
+            xaxis=dict(side="top")
+        )
         st.plotly_chart(fig_heat, use_container_width=True)
 
-# ============ TAB 3: EXPORT ============
-with tab3:
-    st.subheader("📄 Export Report")
-    if not st.session_state.scores:
-        st.info("Score some use cases first to export results.")
-    else:
-        # Build full summary table
-        all_rows = []
-        for uc_name, uc_data in USE_CASES.items():
-            for criterion in uc_data["criteria"].keys():
-                row = {"Use Case": uc_name, "Criterion": criterion}
-                for m in MODELS:
-                    key = f"{uc_name}_{m}"
-                    row[m] = st.session_state.scores.get(key, {}).get(criterion, "")
-                all_rows.append(row)
-
-        export_df = pd.DataFrame(all_rows)
-        st.dataframe(export_df, use_container_width=True)
-
-        csv = export_df.to_csv(index=False).encode("utf-8")
-        st.download_button("⬇️ Download Scores CSV", csv, "llm_benchmark_scores.csv", "text/csv")
-
-        # Summary for paper
         st.divider()
-        st.subheader("📝 Use in your paper")
-        st.markdown("**Copy the analysis paragraphs below into your seminar paper:**")
-        for uc_name, text in st.session_state.analysis.items():
-            st.markdown(f"**{uc_name}**")
-            st.text_area("", text, height=120, key=f"export_{uc_name}", label_visibility="collapsed")
+
+        # ---- Export ----
+        st.subheader("📄 Export for your paper")
+
+        # Full CSV
+        export_rows = []
+        for uc_n, uc_d in USE_CASES.items():
+            for c in uc_d["criteria"]:
+                row = {"Use Case": uc_n, "Criterion": c}
+                for m in MODELS:
+                    row[m] = get_score(uc_n, m, c) or ""
+                export_rows.append(row)
+        export_df = pd.DataFrame(export_rows)
+        st.dataframe(export_df, use_container_width=True)
+        csv = export_df.to_csv(index=False).encode("utf-8")
+        st.download_button("⬇️ Download full scores CSV", csv, "llm_benchmark_scores.csv", "text/csv", use_container_width=False)
+
+        # Summary table for paper
+        st.markdown("**Summary table (copy into your paper):**")
+        summary_rows = []
+        for uc_n in USE_CASES:
+            row = {"Use Case": uc_n}
+            for m in MODELS:
+                row[m] = get_avg(uc_n, m) or "—"
+            summary_rows.append(row)
+        summary_df = pd.DataFrame(summary_rows)
+        st.dataframe(summary_df, use_container_width=True)
+        csv2 = summary_df.to_csv(index=False).encode("utf-8")
+        st.download_button("⬇️ Download summary CSV", csv2, "llm_benchmark_summary.csv", "text/csv")
+
+        # Qualitative notes export
+        if any(st.session_state.notes.values()):
+            st.divider()
+            st.markdown("**Your qualitative observations (for the discussion section):**")
+            for uc_n in USE_CASES:
+                for m in MODELS:
+                    note = st.session_state.notes.get(f"{uc_n}_{m}_note", "")
+                    if note.strip():
+                        st.markdown(f"- **{uc_n} / {m}:** {note}")
 
 st.divider()
-st.caption("Built for academic LLM benchmarking | Firdaouss El Mouden | Justus-Liebig-Universität Gießen")
+st.caption("LLM Benchmarking Dashboard · Firdaouss El Mouden · Justus-Liebig-Universität Gießen · Zero API cost")
