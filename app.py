@@ -87,26 +87,20 @@ if st.session_state.results_df is not None:
     st.subheader("Score Summary Table")
     st.dataframe(df, use_container_width=True)
     
-    # Radar Chart
-    st.subheader("Multi-Metric Radar Comparison")
-    fig = go.Figure()
+    # Grouped Bar Chart
+    st.subheader("Side-by-Side Metric Comparison")
+    # Melt the dataframe to make it "Long Format" for Plotly
+    df_melted = df.melt(id_vars="Metric", var_name="Model", value_name="Score")
     
-    for model in ["Claude", "ChatGPT", "Gemini"]:
-        # Prepare data for radar (close the loop by repeating the first score)
-        scores = df[model].tolist()
-        theta = df["Metric"].tolist()
-        
-        fig.add_trace(go.Scatterpolar(
-            r=scores + [scores[0]],
-            theta=theta + [theta[0]],
-            fill='toself',
-            name=model
-        ))
-        
-    fig.update_layout(
-        polar=dict(radialaxis=dict(visible=True, range=[0, 10])),
-        showlegend=True
+    fig = px.bar(
+        df_melted, 
+        x="Metric", 
+        y="Score", 
+        color="Model", 
+        barmode="group",
+        color_discrete_map={"Claude": "#D97757", "ChatGPT": "#10A37F", "Gemini": "#4285F4"}
     )
+    fig.update_layout(yaxis_range=[0, 10])
     st.plotly_chart(fig, use_container_width=True)
     
     # Download button
