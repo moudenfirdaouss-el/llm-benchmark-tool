@@ -11,10 +11,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# ============ CUSTOM CSS ============
-st.markdown("""
-<style>
-    .-transform: uppercase;
+# ============ C: #555;
+        text-transform: uppercase;
         letter-spacing: 0.05em;
         margin-bottom: 6px;
     }
@@ -24,7 +22,12 @@ st.markdown("""
 # ============ SESSION STATE ============
 for key in ["scores", "responses", "notes"]:
     if key not in st.session_state:
-        st.session_state[: "Excellent — fully meets the criterion with depth and precision"
+        st.session_state[ "#C47B2B",
+    "ChatGPT": "#10A37F",
+    "Gemini": "#4285F4"
+}
+
+SCORE fully meets the criterion with depth and precision"
 }
 
 # ============ SIDEBAR ============
@@ -96,13 +99,16 @@ with tab2:
     for i, model in enumerate(MODELS):
         with cols[i % 3]:
             color = MODEL_COLORS[model]
-            st.markdown(f"<p style='color:{color}; font-weight:700; font-size:15px; margin-bottom:4px;'>🤖 {model}</p>", unsafe_allow_html=True)
-            persist_key = f"resp_{use_case_name}_{model}"
+            st.markdown(f"<p style='color:{color}; font-weight:700}_{model}"
             val = st.session_state.responses.get(persist_key, "")
-            new_val = st.text_areause_case_name}_{model}",
+            new_val = st.text_area(
+                f"{model} response",
+                value=val,
+                height=220,
+                placeholder=f"Paste {model}'s response here...",
+                key=f"ta_{use_case_name}_{model}",
                 label_visibility="collapsed"
             )
-            # Always write back — this is the persistent store
             st.session_state.responses[persist_key] = new_val
             if new_val.strip():
                 wc = len(new_val.split())
@@ -124,12 +130,7 @@ with tab3:
 The rubric tells you exactly what to look for — this makes your evaluation rigorous and defensible for your paper.
     """)
 
-    criteria_list = list(uc["criteria"].keys())
-
-    for model in MODELS:
-        color = MODEL_COLORS[model]
-        # Read from the persistent responses dict (survives tab switching)
-        resp_text = st.session_state.responses.get(f"resp_{use_case_name}_{model}", "").strip()
+    criteria_list = list(uc["criteria}", "").strip()
 
         with st.expander(f"🤖 {model}", expanded=True):
             col_resp, col_scores = st.columns([1, 1])
@@ -137,14 +138,19 @@ The rubric tells you exactly what to look for — this makes your evaluation rig
             with col_resp:
                 st.markdown("<div class='section-header'>Response</div>", unsafe_allow_html=True)
                 if resp_text:
-                    st.markd>')}{'...' if len(resp_text) > 1800 else ''}
+                    st.markdown(f"""
+                    <div_text) > 1800 else ''}
                     </div>
                     """, unsafe_allow_html=True)
                 else:
                     st.warning("No response pasted yet — go to Step 2 first.")
 
             with col_scores:
-                st.markdown("<div class='section-header'>Scores (1–5)</div>",_case_name}_{model}_{crit}"
+                st.markdown("<div class='section-header'>Scores (1–5)</div>", unsafe_allow_html=True)
+                model_scores = {}
+                for crit in criteria_list:
+                    crit_desc = uc["criteria"][crit]
+                    score_key = f"{use_case_name}_{model}_{crit}"
                     saved = st.session_state.scores.get(score_key, 3)
 
                     st.markdown(f"""
@@ -155,10 +161,7 @@ The rubric tells you exactly what to look for — this makes your evaluation rig
                     """, unsafe_allow_html=True)
 
                     score = st.select_slider(
-                        f"{crit}",
-                        options=[1, 2, 3, 4, 5],
-                        value=saved,
-                        format_func=lambda x: f"{x} — {SCORE_RUBRIC[x].split('—')[1].strip()}",
+                        fBRIC[x].split('—')[1].strip()}",
                         key=f"slider_{use_case_name}_{model}_{crit}",
                         label_visibility="collapsed"
                     )
@@ -168,13 +171,11 @@ The rubric tells you exactly what to look for — this makes your evaluation rig
                 if model_scores:
                     avg = sum(model_scores.values()) / len(model_scores)
                     chip_color = "#28a745" if avg >= 4 else "#ffc107" if avg >= 3 else "#dc3545"
-                }; border:1px solid {chip_color}66; font-size:14px; padding:5px 16px;">
-                            Average: {avg:.2f} / 5
+                    st.markdown(f"""} / 5
                         </span>
                     </div>
                     """, unsafe_allow_html=True)
 
-                # Optional qualitative note
                 note_key = f"{use_case_name}_{model}_note"
                 note = st.text_area(
                     "Qualitative observation (optional — use for your paper)",
@@ -192,7 +193,6 @@ The rubric tells you exactly what to look for — this makes your evaluation rig
 # TAB 4: RESULTS & EXPORT
 # ======================================================
 with tab4:
-    # Check if any scores exist
     all_scores_flat = st.session_state.scores
     has_data = any(
         all_scores_flat.get(f"{uc_n}_{m}_{c}")
@@ -202,8 +202,16 @@ with tab4:
     )
 
     if not has_data:
-        st.info("Score at least one use case inn}_{model}_{crit}", None)
+        st.info("Score at least onecrit}", None)
 
         def get_avg(uc_n, model):
             vals = [get_score(uc_n, model, c) for c in USE_CASES[uc_n]["criteria"] if get_score(uc_n, model, c) is not None]
-            return round(sum(vals)/len(vals), 2```
+            return round(sum(vals)/len(vals), 2) if vals else None
+
+        def get_overall(model):
+            vals = []
+            for uc_n, uc_d in USE_CASES.items():
+                for c in uc_d["criteria"]:
+                    s = get_score(uc_n, model, c)
+                    if s is not None:
+                        vals.append(s```
