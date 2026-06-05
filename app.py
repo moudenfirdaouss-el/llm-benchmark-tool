@@ -70,12 +70,11 @@ for key in ["scores", "responses", "notes"]:
     if key not in st.session_state:
         st.session_state[key] = {}
 
-MODELS = ["Claude", "ChatGPT", "Gemini", "Llama"]
+MODELS = ["Claude", "ChatGPT", "Gemini"]
 MODEL_COLORS = {
     "Claude":   "#C47B2B",
     "ChatGPT":  "#10A37F",
-    "Gemini":   "#4285F4",
-    "Llama":    "#7C3AED"
+    "Gemini":   "#4285F4"
 }
 
 SCORE_RUBRIC = {
@@ -123,7 +122,7 @@ uc = USE_CASES[use_case_name]
 st.title("📊 LLM Benchmarking Dashboard")
 st.caption(
     f"HELM-inspired evaluation · **{use_case_name}** · "
-    "Claude · ChatGPT · Gemini · Llama · Zero API cost"
+    "Claude · ChatGPT · Gemini · Zero API cost"
 )
 
 # ============ TABS ============
@@ -140,8 +139,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 with tab1:
     st.subheader("Prompt to run in each LLM")
     st.info(
-        "Copy this exact prompt and run it in **Claude.ai**, **ChatGPT**, **Gemini**, "
-        "and **Llama** (llama.com or meta.ai). Then paste each response in Step 2."
+        "Copy this exact prompt and run it in **Claude.ai**, **ChatGPT**, **Gemini** ". Then paste each response in Step 2."
     )
     st.code(uc["prompt"], language=None)
 
@@ -355,7 +353,7 @@ with tab4:
             [(m, v) for m, v in overall_avgs.items() if v is not None],
             key=lambda x: x[1], reverse=True
         )
-        rank_labels = ["🥇 1st", "🥈 2nd", "🥉 3rd", "4️⃣ 4th"]
+        rank_labels = ["🥇 1st", "🥈 2nd", "🥉 3rd"]
 
         cols = st.columns(len(ranked))
         for i, (model, avg) in enumerate(ranked):
