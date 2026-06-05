@@ -148,8 +148,8 @@ with tab2:
         with cols[i % 2]:
             color = MODEL_COLORS[model]
             st.markdown(f"<p style='color:{color}; font-weight:700; font-size:15px; margin-bottom:4px;'>🤖 {model}</p>", unsafe_allow_html=True)
-            key = f"{use_case_name}_{model}_response"
-            val = st.session_state.responses.get(key, "")
+            persist_key = f"resp_{use_case_name}_{model}"
+            val = st.session_state.responses.get(persist_key, "")
             new_val = st.text_area(
                 f"{model} response",
                 value=val,
@@ -158,7 +158,8 @@ with tab2:
                 key=f"ta_{use_case_name}_{model}",
                 label_visibility="collapsed"
             )
-            st.session_state.responses[key] = new_val
+            # Always write back — this is the persistent store
+            st.session_state.responses[persist_key] = new_val
             if new_val.strip():
                 wc = len(new_val.split())
                 st.caption(f"✅ {wc} words")
@@ -166,7 +167,7 @@ with tab2:
                 st.caption("⬆️ Not yet pasted")
 
     st.divider()
-    filled = sum(1 for m in MODELS if (st.session_state.get(f"ta_{use_case_name}_{m}", "") or st.session_state.responses.get(f"{use_case_name}_{m}_response", "")).strip())
+    filled = sum(1 for m in MODELS if st.session_state.responses.get(f"resp_{use_case_name}_{m}", "").strip())
     st.progress(filled / 4, text=f"{filled}/4 responses entered — go to Step 3 to score them")
 
 # ======================================================
@@ -183,10 +184,8 @@ The rubric tells you exactly what to look for — this makes your evaluation rig
 
     for model in MODELS:
         color = MODEL_COLORS[model]
-        # Read from widget state (set by text_area key in Step 2) with fallback to responses dict
-        widget_key = f"ta_{use_case_name}_{model}"
-        resp_text = (st.session_state.get(widget_key, "") or
-                     st.session_state.responses.get(f"{use_case_name}_{model}_response", "")).strip()
+        # Read from the persistent responses dict (survives tab switching)
+        resp_text = st.session_state.responses.get(f"resp_{use_case_name}_{model}", "").strip()
 
         with st.expander(f"🤖 {model}", expanded=True):
             col_resp, col_scores = st.columns([1, 1])
