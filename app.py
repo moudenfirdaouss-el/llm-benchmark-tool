@@ -11,10 +11,14 @@ st.set_page_config(
     layout="wide"
 )
 
-# ============ C: #555;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 6px;
+# ============ CUSTOM CSS ============
+st.markdown("ffffff;
+        min-height: 200px;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #1a1a1a;
+    }
+    .section-header-bottom: 6px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -22,12 +26,10 @@ st.set_page_config(
 # ============ SESSION STATE ============
 for key in ["scores", "responses", "notes"]:
     if key not in st.session_state:
-        st.session_state[ "#C47B2B",
-    "ChatGPT": "#10A37F",
-    "Gemini": "#4285F4"
-}
+        st.session_state[key] = {}
 
-SCORE fully meets the criterion with depth and precision"
+MODELS = ["Claude", "ChatGPT", "Gemini"]or gaps",
+    5: "Excellent — fully meets the criterion with depth and precision"
 }
 
 # ============ SIDEBAR ============
@@ -82,7 +84,7 @@ with tab1:
     for i, (crit, desc) in enumerate(uc["criteria"].items()):
         with cols[i % 3]:
             st.markdown(f"""
-            <div style="border:1px solid #e0e0e0; border-radius:8px; padding:12px; margin-bottom:10px; background:#fff; color:#1a1a1a;">
+            <div style="border:1px solid #e0e0e0; border-radius:8px; padding:12px; margin-bottom:10px; background:#fff;">
                 <div style="font-weight:600; font-size:14px; margin-bottom:4px;">{crit}</div>
                 <div style="font-size:12px; color:#666;">{desc}</div>
             </div>
@@ -99,7 +101,7 @@ with tab2:
     for i, model in enumerate(MODELS):
         with cols[i % 3]:
             color = MODEL_COLORS[model]
-            st.markdown(f"<p style='color:{color}; font-weight:700}_{model}"
+            st.markdown(f"<p style='color:{color}; font-weight:700_case_name}_{model}"
             val = st.session_state.responses.get(persist_key, "")
             new_val = st.text_area(
                 f"{model} response",
@@ -130,7 +132,11 @@ with tab3:
 The rubric tells you exactly what to look for — this makes your evaluation rigorous and defensible for your paper.
     """)
 
-    criteria_list = list(uc["criteria}", "").strip()
+    criteria_list = list(uc["criteria"].keys())
+
+    for model in MODELS:
+        color = MODEL_COLORS[model]
+        resp_text = st.session_state.responses.get(f"resp_{use_case_name}_{model}", "").strip()
 
         with st.expander(f"🤖 {model}", expanded=True):
             col_resp, col_scores = st.columns([1, 1])
@@ -139,7 +145,7 @@ The rubric tells you exactly what to look for — this makes your evaluation rig
                 st.markdown("<div class='section-header'>Response</div>", unsafe_allow_html=True)
                 if resp_text:
                     st.markdown(f"""
-                    <div_text) > 1800 else ''}
+                    <div class="response-card" style="border) > 1800 else ''}
                     </div>
                     """, unsafe_allow_html=True)
                 else:
@@ -160,8 +166,7 @@ The rubric tells you exactly what to look for — this makes your evaluation rig
                     </div>
                     """, unsafe_allow_html=True)
 
-                    score = st.select_slider(
-                        fBRIC[x].split('—')[1].strip()}",
+                    score = st.CORE_RUBRIC[x].split('—')[1].strip()}",
                         key=f"slider_{use_case_name}_{model}_{crit}",
                         label_visibility="collapsed"
                     )
@@ -171,7 +176,8 @@ The rubric tells you exactly what to look for — this makes your evaluation rig
                 if model_scores:
                     avg = sum(model_scores.values()) / len(model_scores)
                     chip_color = "#28a745" if avg >= 4 else "#ffc107" if avg >= 3 else "#dc3545"
-                    st.markdown(f"""} / 5
+                    stcolor}; border:1px solid {chip_color}66; font-size:14px; padding:5px 16px;">
+                            Average: {avg:.2f} / 5
                         </span>
                     </div>
                     """, unsafe_allow_html=True)
@@ -202,7 +208,10 @@ with tab4:
     )
 
     if not has_data:
-        st.info("Score at least onecrit}", None)
+        st.info("Score at least one use case in Step 3 to see results here.")
+    else:
+        def get_score(uc_n, model, crit):
+            return all_scores_flat.get(f"{uc_n}_{model}_{crit}", None)
 
         def get_avg(uc_n, model):
             vals = [get_score(uc_n, model, c) for c in USE_CASES[uc_n]["criteria"] if get_score(uc_n, model, c) is not None]
@@ -214,4 +223,7 @@ with tab4:
                 for c in uc_d["criteria"]:
                     s = get_score(uc_n, model, c)
                     if s is not None:
-                        vals.append(s```
+                        vals.append(s)
+            return round(sum(vals)/len(vals), 2) if vals else None
+
+        st.subhe```
