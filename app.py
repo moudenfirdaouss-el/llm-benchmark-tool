@@ -160,59 +160,13 @@ st.caption(
 )
 
 # ============ TABS ============
-# Update the tab definitions
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📋 Step 1 — Prompt",
     "📝 Step 2 — Responses",
     "⭐ Step 3 — Score",
     "📊 Step 4 — Results & Export",
-    "⚠️ Step 5 — Tool Hallucination"
+    "🧠 Hallucination Analysis"
 ])
-
-# ... (Keep your existing code for tab1, tab2, tab3, tab4 exactly as it is) ...
-
-# Add this at the very end of the file
-with tab5:
-    st.subheader("⚠️ Tool Hallucination Leaderboard")
-    st.caption("Lower score = More reliable (fewer hallucinated tools/capabilities)")
-    
-    # 1. Extract data from existing scores
-    # We calculate hallucination as the 'inverse' of performance: (5 - avg_score)
-    hallucination_data = {}
-    
-    for model in MODELS:
-        # Find all scores in session state that belong to this model
-        model_scores = []
-        for key, val in st.session_state.scores.items():
-            # This checks if the model name is part of the score key
-            if f"_{model}_" in key:
-                model_scores.append(val)
-        
-        if model_scores:
-            avg_score = sum(model_scores) / len(model_scores)
-            # The Hallucination Index: 0.0 is perfect, 5.0 is maximum hallucination
-            hallucination_index = max(0.0, 5.0 - avg_score)
-            hallucination_data[model] = round(hallucination_index, 2)
-        else:
-            # If no scores exist yet, we don't show them in the ranking
-            continue
-
-    # 2. Render the results
-    if not hallucination_data:
-        st.info("No scoring data found. Please complete Step 3 to generate the leaderboard.")
-    else:
-        render_hallucination_leaderboard(hallucination_data)
-        
-        st.divider()
-        st.markdown("""
-        **Methodology:** 
-        The **Hallucination Index** is calculated as the inverse of the model's average 
-        performance across all criteria ($5 - \text{avg\_score}$). 
-        
-        A score approaching **0.0** indicates high groundedness and adherence to 
-        actual capabilities, whereas higher scores indicate a higher frequency 
-        of hallucinated tools or fabricated capabilities.
-        """)
 
 # ======================================================
 # TAB 1: PROMPT
@@ -221,7 +175,7 @@ with tab1:
     st.subheader("Prompt to run in each LLM")
     st.info(
         "Copy this exact prompt and run it in **Claude.ai**, **ChatGPT**, **Gemini**, "
-        "and **Deepseek** (Deepseek.com). Then paste each response in Step 2."
+        "and **Deepseek** Then paste each response in Step 2."
     )
     st.code(uc["prompt"], language=None)
 
@@ -679,90 +633,204 @@ with tab4:
                 if note.strip():
                     st.markdown(f"- **{label}:** {note}")
 
+# ======================================================
+# TAB 5: HALLUCINATION ANALYSIS
+# ======================================================
+with tab5:
+    st.subheader("🧠 Hallucination Analysis")
+    st.caption(
+        "Extracted from the **Hallucination Avoidance** criterion scores across all use cases. "
+        "A score of 5 means zero hallucination; 1 means severe hallucination."
+    )
+
+    HALLUCINATION_KEY = "Hallucination Avoidance"
+
+    # Collect hallucination scores per use case per model
+    hall_data = {}
+    for uc_n, uc_d in USE_CASES.items():
+        # Find the right key — case-insensitive match in case naming differs slightly
+        matched = next(
+            (k for k in uc_d["criteria"] if "hallucin" in k.lower()), None
+        )
+        if not matched:
+            continue
+        hall_data[uc_n] = {}
+        for m in MODELS:
+            val = st.session_state.scores.get(f"{uc_n}_{m}_{matched}")
+            hall_data[uc_n][m] = val
+
+    has_hall = any(
+        v is not None
+        for uc_scores in hall_data.values()
+        for v in uc_scores.values()
+    )
+
+    if not has_hall:
+        st.info("No hallucination scores found yet — complete Step 3 first.")
+    else:
+        # ---- Invert: hallucination RISK = 6 - score (so higher = worse) ----
+        # We show both: the raw avoidance score and the risk score
+
+        uc_names = [u for u in hall_data if any(v is not None for v in hall_data[u].values())]
+
+        # ---- Summary cards: average hallucination avoidance per model ----
+        st.markdown("#### Overall hallucination avoidance (avg across use cases)")
+        st.caption("Higher = better (model avoids hallucination more consistently)")
+
+        model_hall_avgs = {}
+        for m in MODELS:
+            vals = [hall_data[uc_n][m] for uc_n in uc_names if hall_data[uc_n].get(m) is not None]
+            model_hall_avgs[m] = round(sum(vals) / len(vals), 2) if vals else None
+
+        ranked_hall = sorted(
+            [(m, v) for m, v in model_hall_avgs.items() if v is not None],
+            key=lambda x: x[1], reverse=True
+        )
+
+        cols = st.columns(len(ranked_hall))
+        rank_labels = ["🥇 Most reliable", "🥈 2nd", "🥉 3rd", "4️⃣ Most prone"]
+        for i, (model, avg) in enumerate(ranked_hall):
+            color = MODEL_COLORS[model]
+            risk = round(6 - avg, 2)
+            if avg >= 4:
+                verdict = "🟢 Low risk"
+            elif avg >= 3:
+                verdict = "🟡 Moderate risk"
+            else:
+                verdict = "🔴 High risk"
+            with cols[i]:
+                st.markdown(
+                    f"<div class='metric-card' style='border-top: 4px solid {color};'>"
+                    f"<div style='font-size:12px; opacity:0.6; margin-bottom:4px;'>{rank_labels[i]}</div>"
+                    f"<div style='font-size:18px; font-weight:700; color:{color};'>{model}</div>"
+                    f"<div style='font-size:30px; font-weight:800; margin:6px 0;'>{avg:.2f}</div>"
+                    f"<div style='font-size:11px; opacity:0.55; margin-bottom:6px;'>avoidance score / 5</div>"
+                    f"<div style='font-size:13px;'>{verdict}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+
+        st.divider()
+
+        # ---- Grouped bar: avoidance score per use case ----
+        col_left, col_right = st.columns(2)
+
+        with col_left:
+            st.markdown("#### Avoidance score by use case")
+            st.caption("How well each model avoids hallucination per task (5 = best)")
+
+            bar_data = []
+            for uc_n in uc_names:
+                for m in MODELS:
+                    v = hall_data[uc_n].get(m)
+                    if v is not None:
+                        bar_data.append({"Use Case": uc_n, "Model": m, "Score": v})
+
+            if bar_data:
+                import pandas as pd
+                df_bar = pd.DataFrame(bar_data)
+                fig_bar = go.Figure()
+                for m in MODELS:
+                    subset = df_bar[df_bar["Model"] == m]
+                    fig_bar.add_trace(go.Bar(
+                        name=m,
+                        x=subset["Use Case"],
+                        y=subset["Score"],
+                        marker_color=MODEL_COLORS[m],
+                        text=subset["Score"],
+                        textposition="outside"
+                    ))
+                fig_bar.update_layout(
+                    barmode="group",
+                    yaxis=dict(range=[0, 5.8], title="Avoidance Score (1–5)"),
+                    xaxis_title="",
+                    height=360,
+                    legend=dict(font=dict(size=11)),
+                    margin=dict(t=20, b=20)
+                )
+                st.plotly_chart(fig_bar, use_container_width=True)
+
+        with col_right:
+            st.markdown("#### Hallucination risk score by use case")
+            st.caption("Inverted view: higher = MORE prone to hallucination (6 − avoidance score)")
+
+            if bar_data:
+                df_risk = pd.DataFrame(bar_data)
+                df_risk["Risk"] = 6 - df_risk["Score"]
+                fig_risk = go.Figure()
+                for m in MODELS:
+                    subset = df_risk[df_risk["Model"] == m]
+                    fig_risk.add_trace(go.Bar(
+                        name=m,
+                        x=subset["Use Case"],
+                        y=subset["Risk"],
+                        marker_color=MODEL_COLORS[m],
+                        text=subset["Risk"].round(1),
+                        textposition="outside"
+                    ))
+                fig_risk.update_layout(
+                    barmode="group",
+                    yaxis=dict(range=[0, 5.8], title="Risk Score (higher = worse)"),
+                    xaxis_title="",
+                    height=360,
+                    legend=dict(font=dict(size=11)),
+                    margin=dict(t=20, b=20)
+                )
+                st.plotly_chart(fig_risk, use_container_width=True)
+
+        st.divider()
+
+        # ---- Radar: hallucination avoidance across use cases ----
+        st.markdown("#### Radar — hallucination avoidance profile per model")
+        fig_radar = go.Figure()
+        short_uc = [u.replace(" ", "\n") for u in uc_names]
+        for m in MODELS:
+            vals = [hall_data[uc_n].get(m) or 0 for uc_n in uc_names]
+            fig_radar.add_trace(go.Scatterpolar(
+                r=vals + [vals[0]],
+                theta=short_uc + [short_uc[0]],
+                fill="toself",
+                name=m,
+                line_color=MODEL_COLORS[m],
+                fillcolor=MODEL_COLORS[m],
+                opacity=0.18
+            ))
+        fig_radar.update_layout(
+            polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
+            showlegend=True,
+            height=380,
+            margin=dict(t=20, b=20, l=20, r=20)
+        )
+        st.plotly_chart(fig_radar, use_container_width=True)
+
+        st.divider()
+
+        # ---- Interpretation table ----
+        st.markdown("#### Score interpretation")
+        interp_data = []
+        for uc_n in uc_names:
+            for m in MODELS:
+                v = hall_data[uc_n].get(m)
+                if v is None:
+                    continue
+                if v >= 4:
+                    level = "🟢 Low"
+                    desc = "Stays grounded in source material"
+                elif v == 3:
+                    level = "🟡 Moderate"
+                    desc = "Occasional unsupported claims"
+                else:
+                    level = "🔴 High"
+                    desc = "Frequently fabricates information"
+                interp_data.append({
+                    "Use Case": uc_n, "Model": m,
+                    "Avoidance Score": v, "Risk Level": level, "Description": desc
+                })
+        if interp_data:
+            st.dataframe(pd.DataFrame(interp_data), use_container_width=True, hide_index=True)
+
 st.divider()
 st.caption(
     "LLM Benchmarking Dashboard · Firdaouss El Mouden · "
     "Justus-Liebig-Universität Gießen · No API key required"
 )
-def render_hallucination_leaderboard(model_scores_dict):
-    import plotly.graph_objects as go
-    
-    # Sort models by score (lowest hallucination index first)
-    sorted_items = sorted(model_scores_dict.items(), key=lambda x: x[1])
-    models = [item[0] for item in sorted_items]
-    scores = [item[1] for item in sorted_items]
-    
-    # Calculate variance for the green % text
-    avg_s = sum(scores) / len(scores) if scores else 1
-    percentages = [abs((s - avg_s) / avg_s) * 100 for s in scores]
-
-    fig = go.Figure()
-
-    for i, (m, s) in enumerate(zip(models, scores)):
-        # 1. The dark background bar
-        fig.add_shape(type="rect",
-            x0=0, y0=i-0.25, x1=6, y1=i+0.25,
-            fillcolor="#262730", line_width=0, layer="below")
-        
-        # 2. The vertical indicator line (Green if better than avg, Red if worse)
-        line_color = "#4CAF50" if s <= avg_s else "#f44336"
-        fig.add_trace(go.Scatter(
-            x=[s, s], y=[i-0.25, i+0.25],
-            mode='lines',
-            line=dict(color=line_color, width=3),
-            showlegend=False
-        ))
-
-    # 3. Score Label (Left side)
-    fig.add_trace(go.Scatter(
-        x=[0.05]*len(models), y=models,
-        mode='text',
-        text=[f"<b>{s:.2f}</b>" for s in scores],
-        textposition="middle left",
-        textfont=dict(color="white", size=14),
-        showlegend=False
-    ))
-
-    # 4. Percentage Label (Right side)
-    fig.add_trace(go.Scatter(
-        x=[5.95]*len(models), y=models,
-        mode='text',
-        text=[f"<span style='color:#4CAF50;'>▼ {p:.1f}%</span>" for p in percentages],
-        textposition="middle right",
-        textfont=dict(size=12),
-        showlegend=False
-    ))
-
-    fig.update_layout(
-        template="plotly_dark",
-        plot_bgcolor="#0e1117",
-        paper_bgcolor="#0e1117",
-        xaxis=dict(visible=False, range=[0, 6]),
-        yaxis=dict(autorange="reversed", visible=False),
-        height=400,
-        margin=dict(l=50, r=50, t=20, b=20)
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-# 9. TAB 5 CONTENT (PUT THE LOGIC HERE AT THE VERY END)
-with tab5:
-    st.subheader("⚠️ Tool Hallucination Leaderboard")
-    st.caption("Lower score = More reliable (fewer hallucinated tools/capabilities)")
-    
-    hallucination_data = {}
-    for model in MODELS:
-        model_scores = []
-        for key, val in st.session_state.scores.items():
-            if f"_{model}_" in key:
-                model_scores.append(val)
-        if model_scores:
-            avg_score = sum(model_scores) / len(model_scores)
-            hallucination_index = max(0.0, 5.0 - avg_score)
-            hallucination_data[model] = round(hallucination_index, 2)
-
-    if not hallucination_data:
-        st.info("No scoring data found. Please complete Step 3 to generate the leaderboard.")
-    else:
-        render_hallucination_leaderboard(hallucination_data)
-        st.divider()
-        st.markdown("...") # Your methodology text
