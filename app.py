@@ -160,12 +160,59 @@ st.caption(
 )
 
 # ============ TABS ============
-tab1, tab2, tab3, tab4 = st.tabs([
+# Update the tab definitions
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📋 Step 1 — Prompt",
     "📝 Step 2 — Responses",
     "⭐ Step 3 — Score",
-    "📊 Step 4 — Results & Export"
+    "📊 Step 4 — Results & Export",
+    "⚠️ Step 5 — Tool Hallucination"
 ])
+
+# ... (Keep your existing code for tab1, tab2, tab3, tab4 exactly as it is) ...
+
+# Add this at the very end of the file
+with tab5:
+    st.subheader("⚠️ Tool Hallucination Leaderboard")
+    st.caption("Lower score = More reliable (fewer hallucinated tools/capabilities)")
+    
+    # 1. Extract data from existing scores
+    # We calculate hallucination as the 'inverse' of performance: (5 - avg_score)
+    hallucination_data = {}
+    
+    for model in MODELS:
+        # Find all scores in session state that belong to this model
+        model_scores = []
+        for key, val in st.session_state.scores.items():
+            # This checks if the model name is part of the score key
+            if f"_{model}_" in key:
+                model_scores.append(val)
+        
+        if model_scores:
+            avg_score = sum(model_scores) / len(model_scores)
+            # The Hallucination Index: 0.0 is perfect, 5.0 is maximum hallucination
+            hallucination_index = max(0.0, 5.0 - avg_score)
+            hallucination_data[model] = round(hallucination_index, 2)
+        else:
+            # If no scores exist yet, we don't show them in the ranking
+            continue
+
+    # 2. Render the results
+    if not hallucination_data:
+        st.info("No scoring data found. Please complete Step 3 to generate the leaderboard.")
+    else:
+        render_hallucination_leaderboard(hallucination_data)
+        
+        st.divider()
+        st.markdown("""
+        **Methodology:** 
+        The **Hallucination Index** is calculated as the inverse of the model's average 
+        performance across all criteria ($5 - \text{avg\_score}$). 
+        
+        A score approaching **0.0** indicates high groundedness and adherence to 
+        actual capabilities, whereas higher scores indicate a higher frequency 
+        of hallucinated tools or fabricated capabilities.
+        """)
 
 # ======================================================
 # TAB 1: PROMPT
@@ -637,3 +684,62 @@ st.caption(
     "LLM Benchmarking Dashboard · Firdaouss El Mouden · "
     "Justus-Liebig-Universität Gießen · No API key required"
 )
+def render_hallucination_leaderboard(model_scores_dict):
+    import plotly.graph_objects as go
+    
+    # Sort models by score (lowest hallucination index first)
+    sorted_items = sorted(model_scores_dict.items(), key=lambda x: x[1])
+    models = [item[0] for item in sorted_items]
+    scores = [item[1] for item in sorted_items]
+    
+    # Calculate variance for the green % text
+    avg_s = sum(scores) / len(scores) if scores else 1
+    percentages = [abs((s - avg_s) / avg_s) * 100 for s in scores]
+
+    fig = go.Figure()
+
+    for i, (m, s) in enumerate(zip(models, scores)):
+        # 1. The dark background bar
+        fig.add_shape(type="rect",
+            x0=0, y0=i-0.25, x1=6, y1=i+0.25,
+            fillcolor="#262730", line_width=0, layer="below")
+        
+        # 2. The vertical indicator line (Green if better than avg, Red if worse)
+        line_color = "#4CAF50" if s <= avg_s else "#f44336"
+        fig.add_trace(go.Scatter(
+            x=[s, s], y=[i-0.25, i+0.25],
+            mode='lines',
+            line=dict(color=line_color, width=3),
+            showlegend=False
+        ))
+
+    # 3. Score Label (Left side)
+    fig.add_trace(go.Scatter(
+        x=[0.05]*len(models), y=models,
+        mode='text',
+        text=[f"<b>{s:.2f}</b>" for s in scores],
+        textposition="middle left",
+        textfont=dict(color="white", size=14),
+        showlegend=False
+    ))
+
+    # 4. Percentage Label (Right side)
+    fig.add_trace(go.Scatter(
+        x=[5.95]*len(models), y=models,
+        mode='text',
+        text=[f"<span style='color:#4CAF50;'>▼ {p:.1f}%</span>" for p in percentages],
+        textposition="middle right",
+        textfont=dict(size=12),
+        showlegend=False
+    ))
+
+    fig.update_layout(
+        template="plotly_dark",
+        plot_bgcolor="#0e1117",
+        paper_bgcolor="#0e1117",
+        xaxis=dict(visible=False, range=[0, 6]),
+        yaxis=dict(autorange="reversed", visible=False),
+        height=400,
+        margin=dict(l=50, r=50, t=20, b=20)
+    )
+    st.plotly_chart(fig, use_container_width=True)
