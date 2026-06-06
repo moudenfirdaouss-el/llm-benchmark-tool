@@ -175,7 +175,7 @@ with tab1:
     st.subheader("Prompt to run in each LLM")
     st.info(
         "Copy this exact prompt and run it in **Claude.ai**, **ChatGPT**, **Gemini**, "
-        "and **Deepseek** Then paste each response in Step 2."
+        "and **Deepseek**  Then paste each response in Step 2."
     )
     st.code(uc["prompt"], language=None)
 
@@ -634,24 +634,106 @@ with tab4:
                     st.markdown(f"- **{label}:** {note}")
 
 # ======================================================
-# TAB 5: HALLUCINATION ANALYSIS
+# TAB 5: HALLUCINATION LEADERBOARD
 # ======================================================
 with tab5:
-    st.subheader("🧠 Hallucination Analysis")
-    st.caption(
-        "Extracted from the **Hallucination Avoidance** criterion scores across all use cases. "
-        "A score of 5 means zero hallucination; 1 means severe hallucination."
-    )
 
-    HALLUCINATION_KEY = "Hallucination Avoidance"
+    # ---- CSS for leaderboard ----
+    st.markdown("""
+    <style>
+    .lb-header {
+        text-align: center;
+        padding: 28px 0 8px 0;
+    }
+    .lb-title {
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        margin-bottom: 4px;
+    }
+    .lb-subtitle {
+        font-size: 13px;
+        opacity: 0.55;
+        margin-bottom: 0;
+    }
+    .lb-row {
+        display: flex;
+        align-items: center;
+        padding: 14px 20px;
+        border-radius: 12px;
+        border: 1px solid rgba(128,128,128,0.15);
+        margin-bottom: 10px;
+        gap: 16px;
+    }
+    .lb-rank {
+        font-size: 22px;
+        font-weight: 800;
+        min-width: 36px;
+        text-align: center;
+    }
+    .lb-model {
+        font-size: 17px;
+        font-weight: 700;
+        min-width: 100px;
+    }
+    .lb-bar-wrap {
+        flex: 1;
+        background: rgba(128,128,128,0.1);
+        border-radius: 99px;
+        height: 12px;
+        overflow: hidden;
+    }
+    .lb-bar-fill {
+        height: 100%;
+        border-radius: 99px;
+        transition: width 0.6s ease;
+    }
+    .lb-score {
+        font-size: 20px;
+        font-weight: 800;
+        min-width: 52px;
+        text-align: right;
+    }
+    .lb-badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 99px;
+        min-width: 90px;
+        text-align: center;
+    }
+    .lb-detail {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 6px;
+    }
+    .lb-pill {
+        font-size: 11px;
+        padding: 2px 10px;
+        border-radius: 99px;
+        opacity: 0.8;
+    }
+    .lb-divider {
+        border: none;
+        border-top: 1px solid rgba(128,128,128,0.12);
+        margin: 20px 0;
+    }
+    .stat-box {
+        border: 1px solid rgba(128,128,128,0.15);
+        border-radius: 10px;
+        padding: 14px;
+        text-align: center;
+    }
+    .stat-val { font-size: 22px; font-weight: 800; }
+    .stat-lbl { font-size: 11px; opacity: 0.55; margin-top: 2px; }
+    </style>
+    """, unsafe_allow_html=True)
 
-    # Collect hallucination scores per use case per model
+    # ---- Collect hallucination scores ----
     hall_data = {}
     for uc_n, uc_d in USE_CASES.items():
-        # Find the right key — case-insensitive match in case naming differs slightly
-        matched = next(
-            (k for k in uc_d["criteria"] if "hallucin" in k.lower()), None
-        )
+        matched = next((k for k in uc_d["criteria"] if "hallucin" in k.lower()), None)
         if not matched:
             continue
         hall_data[uc_n] = {}
@@ -659,175 +741,200 @@ with tab5:
             val = st.session_state.scores.get(f"{uc_n}_{m}_{matched}")
             hall_data[uc_n][m] = val
 
-    has_hall = any(
-        v is not None
-        for uc_scores in hall_data.values()
-        for v in uc_scores.values()
-    )
+    uc_names = [u for u in hall_data if any(v is not None for v in hall_data[u].values())]
+    has_hall = bool(uc_names)
 
     if not has_hall:
-        st.info("No hallucination scores found yet — complete Step 3 first.")
+        st.info("No hallucination scores yet — complete Step 3 first.")
     else:
-        # ---- Invert: hallucination RISK = 6 - score (so higher = worse) ----
-        # We show both: the raw avoidance score and the risk score
+        import pandas as pd
 
-        uc_names = [u for u in hall_data if any(v is not None for v in hall_data[u].values())]
-
-        # ---- Summary cards: average hallucination avoidance per model ----
-        st.markdown("#### Overall hallucination avoidance (avg across use cases)")
-        st.caption("Higher = better (model avoids hallucination more consistently)")
-
-        model_hall_avgs = {}
+        # Compute per-model averages
+        model_avgs = {}
         for m in MODELS:
             vals = [hall_data[uc_n][m] for uc_n in uc_names if hall_data[uc_n].get(m) is not None]
-            model_hall_avgs[m] = round(sum(vals) / len(vals), 2) if vals else None
+            model_avgs[m] = round(sum(vals) / len(vals), 2) if vals else None
 
-        ranked_hall = sorted(
-            [(m, v) for m, v in model_hall_avgs.items() if v is not None],
+        ranked = sorted(
+            [(m, v) for m, v in model_avgs.items() if v is not None],
             key=lambda x: x[1], reverse=True
         )
 
-        cols = st.columns(len(ranked_hall))
-        rank_labels = ["🥇 Most reliable", "🥈 2nd", "🥉 3rd", "4️⃣ Most prone"]
-        for i, (model, avg) in enumerate(ranked_hall):
+        def risk_label(score):
+            if score >= 4.5: return ("🟢 Excellent", "#1a9e5c", "#e6f9f0")
+            if score >= 4.0: return ("🟢 Low risk",  "#1a9e5c", "#e6f9f0")
+            if score >= 3.0: return ("🟡 Moderate",  "#b8860b", "#fdf8e1")
+            return              ("🔴 High risk",  "#c0392b", "#fdecea")
+
+        rank_icons = ["🥇", "🥈", "🥉", "4️⃣"]
+
+        # ---- Header ----
+        st.markdown("""
+        <div class="lb-header">
+            <div class="lb-title">🧠 Hallucination Leaderboard</div>
+            <div class="lb-subtitle">
+                Ranked by Hallucination Avoidance score (1–5) · Higher = more reliable · Lower = more prone to fabrication
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("<hr class='lb-divider'>", unsafe_allow_html=True)
+
+        # ---- Leaderboard rows ----
+        for i, (model, avg) in enumerate(ranked):
             color = MODEL_COLORS[model]
-            risk = round(6 - avg, 2)
-            if avg >= 4:
-                verdict = "🟢 Low risk"
-            elif avg >= 3:
-                verdict = "🟡 Moderate risk"
-            else:
-                verdict = "🔴 High risk"
-            with cols[i]:
-                st.markdown(
-                    f"<div class='metric-card' style='border-top: 4px solid {color};'>"
-                    f"<div style='font-size:12px; opacity:0.6; margin-bottom:4px;'>{rank_labels[i]}</div>"
-                    f"<div style='font-size:18px; font-weight:700; color:{color};'>{model}</div>"
-                    f"<div style='font-size:30px; font-weight:800; margin:6px 0;'>{avg:.2f}</div>"
-                    f"<div style='font-size:11px; opacity:0.55; margin-bottom:6px;'>avoidance score / 5</div>"
-                    f"<div style='font-size:13px;'>{verdict}</div>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
+            bar_pct = int((avg / 5) * 100)
+            risk_text, risk_color, risk_bg = risk_label(avg)
+            risk_score = round(6 - avg, 2)
 
-        st.divider()
+            # Per-use-case pills
+            pills_html = ""
+            for uc_n in uc_names:
+                v = hall_data[uc_n].get(model)
+                if v is not None:
+                    short = uc_n.split()[0]
+                    pill_color = "#1a9e5c" if v >= 4 else "#b8860b" if v >= 3 else "#c0392b"
+                    pills_html += (
+                        f"<span class='lb-pill' style='background:{pill_color}18; "
+                        f"color:{pill_color}; border:1px solid {pill_color}44;'>"
+                        f"{short}: {v}/5</span>"
+                    )
 
-        # ---- Grouped bar: avoidance score per use case ----
-        col_left, col_right = st.columns(2)
+            st.markdown(f"""
+            <div class="lb-row" style="border-left: 5px solid {color};">
+                <div class="lb-rank">{rank_icons[i]}</div>
+                <div style="flex:0 0 110px;">
+                    <div class="lb-model" style="color:{color};">{model}</div>
+                    <div class="lb-detail">{pills_html}</div>
+                </div>
+                <div class="lb-bar-wrap">
+                    <div class="lb-bar-fill" style="width:{bar_pct}%; background:{color};"></div>
+                </div>
+                <div class="lb-score" style="color:{color};">{avg:.2f}<span style="font-size:12px; font-weight:400; opacity:0.5;">/5</span></div>
+                <div class="lb-badge" style="background:{risk_bg}; color:{risk_color}; border:1px solid {risk_color}44;">
+                    {risk_text}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        with col_left:
+        st.markdown("<hr class='lb-divider'>", unsafe_allow_html=True)
+
+        # ---- Summary stats row ----
+        st.markdown("#### 📊 Summary statistics")
+        all_vals = [v for m, v in model_avgs.items() if v is not None]
+        best_model, best_score = ranked[0]
+        worst_model, worst_score = ranked[-1]
+        gap = round(best_score - worst_score, 2)
+        avg_all = round(sum(all_vals) / len(all_vals), 2)
+
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.markdown(f"""<div class="stat-box">
+                <div class="stat-val" style="color:{MODEL_COLORS[best_model]};">{best_model}</div>
+                <div class="stat-lbl">Most reliable model</div>
+            </div>""", unsafe_allow_html=True)
+        with c2:
+            st.markdown(f"""<div class="stat-box">
+                <div class="stat-val" style="color:{MODEL_COLORS[worst_model]};">{worst_model}</div>
+                <div class="stat-lbl">Most prone to hallucination</div>
+            </div>""", unsafe_allow_html=True)
+        with c3:
+            st.markdown(f"""<div class="stat-box">
+                <div class="stat-val">{avg_all:.2f}</div>
+                <div class="stat-lbl">Group average / 5</div>
+            </div>""", unsafe_allow_html=True)
+        with c4:
+            st.markdown(f"""<div class="stat-box">
+                <div class="stat-val">{gap}</div>
+                <div class="stat-lbl">Score gap (best vs worst)</div>
+            </div>""", unsafe_allow_html=True)
+
+        st.markdown("<hr class='lb-divider'>", unsafe_allow_html=True)
+
+        # ---- Chart: avoidance vs risk side by side ----
+        col_l, col_r = st.columns(2)
+
+        with col_l:
             st.markdown("#### Avoidance score by use case")
-            st.caption("How well each model avoids hallucination per task (5 = best)")
-
-            bar_data = []
+            bar_rows = []
             for uc_n in uc_names:
                 for m in MODELS:
                     v = hall_data[uc_n].get(m)
                     if v is not None:
-                        bar_data.append({"Use Case": uc_n, "Model": m, "Score": v})
-
-            if bar_data:
-                import pandas as pd
-                df_bar = pd.DataFrame(bar_data)
-                fig_bar = go.Figure()
+                        bar_rows.append({"Use Case": uc_n, "Model": m, "Score": v})
+            if bar_rows:
+                df_b = pd.DataFrame(bar_rows)
+                fig_b = go.Figure()
                 for m in MODELS:
-                    subset = df_bar[df_bar["Model"] == m]
-                    fig_bar.add_trace(go.Bar(
-                        name=m,
-                        x=subset["Use Case"],
-                        y=subset["Score"],
+                    s = df_b[df_b["Model"] == m]
+                    fig_b.add_trace(go.Bar(
+                        name=m, x=s["Use Case"], y=s["Score"],
                         marker_color=MODEL_COLORS[m],
-                        text=subset["Score"],
-                        textposition="outside"
+                        text=s["Score"], textposition="outside"
                     ))
-                fig_bar.update_layout(
+                fig_b.update_layout(
                     barmode="group",
-                    yaxis=dict(range=[0, 5.8], title="Avoidance Score (1–5)"),
-                    xaxis_title="",
-                    height=360,
-                    legend=dict(font=dict(size=11)),
-                    margin=dict(t=20, b=20)
+                    yaxis=dict(range=[0, 5.8], title="Score (1–5, higher = better)"),
+                    xaxis_title="", height=320,
+                    margin=dict(t=10, b=10),
+                    legend=dict(font=dict(size=11))
                 )
-                st.plotly_chart(fig_bar, use_container_width=True)
+                st.plotly_chart(fig_b, use_container_width=True)
 
-        with col_right:
+        with col_r:
             st.markdown("#### Hallucination risk score by use case")
-            st.caption("Inverted view: higher = MORE prone to hallucination (6 − avoidance score)")
-
-            if bar_data:
-                df_risk = pd.DataFrame(bar_data)
-                df_risk["Risk"] = 6 - df_risk["Score"]
-                fig_risk = go.Figure()
+            st.caption("Inverted: higher = more prone to hallucination")
+            if bar_rows:
+                df_r = pd.DataFrame(bar_rows)
+                df_r["Risk"] = 6 - df_r["Score"]
+                fig_r = go.Figure()
                 for m in MODELS:
-                    subset = df_risk[df_risk["Model"] == m]
-                    fig_risk.add_trace(go.Bar(
-                        name=m,
-                        x=subset["Use Case"],
-                        y=subset["Risk"],
+                    s = df_r[df_r["Model"] == m]
+                    fig_r.add_trace(go.Bar(
+                        name=m, x=s["Use Case"], y=s["Risk"],
                         marker_color=MODEL_COLORS[m],
-                        text=subset["Risk"].round(1),
-                        textposition="outside"
+                        text=s["Risk"].round(1), textposition="outside"
                     ))
-                fig_risk.update_layout(
+                fig_r.update_layout(
                     barmode="group",
-                    yaxis=dict(range=[0, 5.8], title="Risk Score (higher = worse)"),
-                    xaxis_title="",
-                    height=360,
-                    legend=dict(font=dict(size=11)),
-                    margin=dict(t=20, b=20)
+                    yaxis=dict(range=[0, 5.8], title="Risk (higher = worse)"),
+                    xaxis_title="", height=320,
+                    margin=dict(t=10, b=10),
+                    legend=dict(font=dict(size=11))
                 )
-                st.plotly_chart(fig_risk, use_container_width=True)
+                st.plotly_chart(fig_r, use_container_width=True)
 
-        st.divider()
+        st.markdown("<hr class='lb-divider'>", unsafe_allow_html=True)
 
-        # ---- Radar: hallucination avoidance across use cases ----
-        st.markdown("#### Radar — hallucination avoidance profile per model")
-        fig_radar = go.Figure()
-        short_uc = [u.replace(" ", "\n") for u in uc_names]
-        for m in MODELS:
-            vals = [hall_data[uc_n].get(m) or 0 for uc_n in uc_names]
-            fig_radar.add_trace(go.Scatterpolar(
-                r=vals + [vals[0]],
-                theta=short_uc + [short_uc[0]],
-                fill="toself",
-                name=m,
-                line_color=MODEL_COLORS[m],
-                fillcolor=MODEL_COLORS[m],
-                opacity=0.18
-            ))
-        fig_radar.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[0, 5])),
-            showlegend=True,
-            height=380,
-            margin=dict(t=20, b=20, l=20, r=20)
-        )
-        st.plotly_chart(fig_radar, use_container_width=True)
-
-        st.divider()
-
-        # ---- Interpretation table ----
-        st.markdown("#### Score interpretation")
-        interp_data = []
+        # ---- Detailed score table ----
+        st.markdown("#### Detailed scores")
+        table_rows = []
         for uc_n in uc_names:
             for m in MODELS:
                 v = hall_data[uc_n].get(m)
                 if v is None:
                     continue
-                if v >= 4:
-                    level = "🟢 Low"
-                    desc = "Stays grounded in source material"
-                elif v == 3:
-                    level = "🟡 Moderate"
-                    desc = "Occasional unsupported claims"
-                else:
-                    level = "🔴 High"
-                    desc = "Frequently fabricates information"
-                interp_data.append({
+                risk_t, _, _ = risk_label(v)
+                table_rows.append({
                     "Use Case": uc_n, "Model": m,
-                    "Avoidance Score": v, "Risk Level": level, "Description": desc
+                    "Avoidance Score": v,
+                    "Risk Score": round(6 - v, 1),
+                    "Risk Level": risk_t
                 })
-        if interp_data:
-            st.dataframe(pd.DataFrame(interp_data), use_container_width=True, hide_index=True)
+        if table_rows:
+            df_tbl = pd.DataFrame(table_rows)
+            def color_avoidance(val):
+                if isinstance(val, (int, float)):
+                    if val >= 4: return "background-color:#d4edda; color:#155724"
+                    if val >= 3: return "background-color:#fff3cd; color:#856404"
+                    return "background-color:#f8d7da; color:#721c24"
+                return ""
+            styled_tbl = (
+                df_tbl.style
+                .map(color_avoidance, subset=["Avoidance Score", "Risk Score"])
+            )
+            st.dataframe(styled_tbl, use_container_width=True, hide_index=True)
+
 
 st.divider()
 st.caption(
