@@ -1,9 +1,9 @@
+```python
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from use_cases import USE_CASES
-
 import json
 import os
 
@@ -13,11 +13,13 @@ SAVE_FILE = "benchmark_data.json"
 def load_data():
     if os.path.exists(SAVE_FILE):
         try:
-            with open(SAVE_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            psession_state.responses,
-        "notes": st.session_state.notes
+            with open(S": {}}
+
+def save_data():
+    data = {
+        "scores": st.session_state.scores,
+        "responses": st.session_state.responses,
+        "notes": st.session_state.notes,
     }
     try:
         with open(SAVE_FILE, "w", encoding="utf-8") as f:
