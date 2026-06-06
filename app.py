@@ -95,12 +95,12 @@ if "scores" not in st.session_state:
     st.session_state.responses = _saved["responses"]
     st.session_state.notes     = _saved["notes"]
 
-MODELS = ["Claude", "ChatGPT", "Gemini", "Deepseek"]
+MODELS = ["Claude", "ChatGPT", "Gemini", "Llama"]
 MODEL_COLORS = {
     "Claude":   "#C47B2B",
     "ChatGPT":  "#10A37F",
     "Gemini":   "#4285F4",
-    "Deepseek":    "#7C3AED"
+    "Llama":    "#7C3AED"
 }
 
 SCORE_RUBRIC = {
@@ -156,7 +156,7 @@ uc = USE_CASES[use_case_name]
 st.title("📊 LLM Benchmarking Dashboard")
 st.caption(
     f"HELM-inspired evaluation · **{use_case_name}** · "
-    "Claude · ChatGPT · Gemini · Deepseek · Zero API cost"
+    "Claude · ChatGPT · Gemini · Llama · Zero API cost"
 )
 
 # ============ TABS ============
@@ -174,7 +174,7 @@ with tab1:
     st.subheader("Prompt to run in each LLM")
     st.info(
         "Copy this exact prompt and run it in **Claude.ai**, **ChatGPT**, **Gemini**, "
-        "and **Deepseek** (Deepseek.com). Then paste each response in Step 2."
+        "and **Llama** (llama.com or meta.ai). Then paste each response in Step 2."
     )
     st.code(uc["prompt"], language=None)
 
@@ -266,10 +266,8 @@ with tab3:
             with col_resp:
                 st.markdown("<div class='section-header'>Response</div>", unsafe_allow_html=True)
                 if resp_text:
-                    display_text = resp_text[:2000] + ("..." if len(resp_text) > 2000 else "")
-                    # Escape HTML special chars then restore line breaks
                     safe = (
-                        display_text
+                        resp_text
                         .replace("&", "&amp;")
                         .replace("<", "&lt;")
                         .replace(">", "&gt;")
