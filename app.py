@@ -1,31 +1,8 @@
-```python
 import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from use_cases import USE_CASES
-import json
-import os
-
-# ============ PERSISTENCE ============
-SAVE_FILE = "benchmark_data.json"
-
-def load_data():
-    if os.path.exists(SAVE_FILE):
-        try:
-            with open(S": {})
-
-def save_data():
-    data = {
-        "scores": st.session_state.scores,
-        "responses": st.session_state.responses,
-        "notes": st.session_state.notes,
-    }
-    try:
-        with open(SAVE_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-    except Exception as e:
-        st.error(f"Could not save: {e}")
 
 # ============ PAGE CONFIG ============
 st.set_page_config(
@@ -88,20 +65,42 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ============ SESSION STATE (with auto-load) ============
-if "data_loaded" not in st.session_state:
-    saved = load_data()
-    st.session_state.scores = saved.get("scores", {})
-    st.session_state.responses = saved.get("responses", {})
-    st.session_state.notes = saved.get("notes", {})
-    st.session_state.data_loaded = True
+# ============ PERSISTENCE (JSON file) ============
+import json, os
 
-MODELS = ["Claude", "ChatGPT", "Gemini", "Deepseek"]
+SAVE_FILE = "benchmark_data.json"
+
+def load_data():
+    if os.path.exists(SAVE_FILE):
+        try:
+            with open(SAVE_FILE, "r") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"scores": {}, "responses": {}, "notes": {}}
+
+def save_data():
+    data = {
+        "scores":    dict(st.session_state.scores),
+        "responses": dict(st.session_state.responses),
+        "notes":     dict(st.session_state.notes),
+    }
+    with open(SAVE_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+# ============ SESSION STATE ============
+if "scores" not in st.session_state:
+    _saved = load_data()
+    st.session_state.scores    = _saved["scores"]
+    st.session_state.responses = _saved["responses"]
+    st.session_state.notes     = _saved["notes"]
+
+MODELS = ["Claude", "ChatGPT", "Gemini", "Llama"]
 MODEL_COLORS = {
     "Claude":   "#C47B2B",
     "ChatGPT":  "#10A37F",
     "Gemini":   "#4285F4",
-    "Deepseek":    "#7C3AED"
+    "Llama":    "#7C3AED"
 }
 
 SCORE_RUBRIC = {
@@ -142,6 +141,14 @@ with st.sidebar:
     st.markdown("**Models:**")
     for m, c in MODEL_COLORS.items():
         st.markdown(f"<span style='color:{c}; font-size:16px'>■</span> {m}", unsafe_allow_html=True)
+    st.divider()
+    if st.button("🗑️ Clear all saved data", use_container_width=True):
+        st.session_state.scores    = {}
+        st.session_state.responses = {}
+        st.session_state.notes     = {}
+        save_data()
+        st.success("All data cleared.")
+        st.rerun()
 
 uc = USE_CASES[use_case_name]
 
@@ -149,7 +156,7 @@ uc = USE_CASES[use_case_name]
 st.title("📊 LLM Benchmarking Dashboard")
 st.caption(
     f"HELM-inspired evaluation · **{use_case_name}** · "
-    "Claude · ChatGPT · Gemini · Deepseek · Zero API cost"
+    "Claude · ChatGPT · Gemini · Llama · Zero API cost"
 )
 
 # ============ TABS ============
@@ -167,7 +174,7 @@ with tab1:
     st.subheader("Prompt to run in each LLM")
     st.info(
         "Copy this exact prompt and run it in **Claude.ai**, **ChatGPT**, **Gemini**, "
-        "and **Deepseek** (Deepseek.com). Then paste each response in Step 2."
+        "and **Llama** (llama.com or meta.ai). Then paste each response in Step 2."
     )
     st.code(uc["prompt"], language=None)
 
@@ -216,6 +223,7 @@ with tab2:
             )
             # Always persist immediately
             st.session_state.responses[persist_key] = new_val
+            save_data()
 
             if new_val.strip():
                 wc = len(new_val.split())
@@ -303,6 +311,7 @@ with tab3:
                         label_visibility="collapsed"
                     )
                     st.session_state.scores[score_key] = score
+                    save_data()
                     model_scores[crit] = score
 
                 # Average badge
@@ -334,6 +343,7 @@ with tab3:
                     key=f"note_{use_case_name}_{model}"
                 )
                 st.session_state.notes[note_key] = note
+                save_data()
 
         st.divider()
 
