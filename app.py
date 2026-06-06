@@ -13,7 +13,7 @@ SAVE_FILE = "benchmark_data.json"
 def load_data():
     if os.path.exists(SAVE_FILE):
         try:
-            with open(S": {}}
+            with open(S": {})
 
 def save_data():
     data = {
