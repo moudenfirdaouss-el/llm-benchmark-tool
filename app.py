@@ -743,3 +743,26 @@ def render_hallucination_leaderboard(model_scores_dict):
         margin=dict(l=50, r=50, t=20, b=20)
     )
     st.plotly_chart(fig, use_container_width=True)
+
+# 9. TAB 5 CONTENT (PUT THE LOGIC HERE AT THE VERY END)
+with tab5:
+    st.subheader("⚠️ Tool Hallucination Leaderboard")
+    st.caption("Lower score = More reliable (fewer hallucinated tools/capabilities)")
+    
+    hallucination_data = {}
+    for model in MODELS:
+        model_scores = []
+        for key, val in st.session_state.scores.items():
+            if f"_{model}_" in key:
+                model_scores.append(val)
+        if model_scores:
+            avg_score = sum(model_scores) / len(model_scores)
+            hallucination_index = max(0.0, 5.0 - avg_score)
+            hallucination_data[model] = round(hallucination_index, 2)
+
+    if not hallucination_data:
+        st.info("No scoring data found. Please complete Step 3 to generate the leaderboard.")
+    else:
+        render_hallucination_leaderboard(hallucination_data)
+        st.divider()
+        st.markdown("...") # Your methodology text
