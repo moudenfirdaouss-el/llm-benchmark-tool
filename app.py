@@ -4,32 +4,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 from use_cases import USE_CASES
 
-import json
-import os
-
-# ============ PERSISTENCE ============
-SAVE_FILE = "benchmark_data.json"
-
-def load_data():
-    """Load saved data from file if it exists."""
-    if os.path.exists(SAVE_FILE):
-        try:
-            with open(SAes": {}}
-    return {"scores": {}, "responses": {}, "notes": {}}
-
-def save_data():
-    """Save current session state to file."""
-    data = {
-        "scores": st.session_state.scores,
-        "responses": st.session_state.responses,
-        "notes": st.session_state.notes
-    }
-    try:
-        with open(SAVE_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-    except Exception as e:
-        st.error(f"Could not save: {e}")
-
 # ============ PAGE CONFIG ============
 st.set_page_config(
     page_title="LLM Benchmarking Dashboard",
@@ -91,20 +65,17 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ============ SESSION STATE (with auto-load) ============
-if "data_loaded" not in st.session_state:
-    saved = load_data()
-    st.session_state.scores = saved.get("scores", {})
-    st.session_state.responses = saved.get("responses", {})
-    st.session_state.notes = saved.get("notes", {})
-    st.session_state.data_loaded = True
+# ============ SESSION STATE ============
+for key in ["scores", "responses", "notes"]:
+    if key not in st.session_state:
+        st.session_state[key] = {}
 
-MODELS = ["Claude", "ChatGPT", "Gemini", "Deepseek"]
+MODELS = ["Claude", "ChatGPT", "Gemini", "Llama"]
 MODEL_COLORS = {
     "Claude":   "#C47B2B",
     "ChatGPT":  "#10A37F",
     "Gemini":   "#4285F4",
-    "Deepseek":    "#7C3AED"
+    "Llama":    "#7C3AED"
 }
 
 SCORE_RUBRIC = {
@@ -147,19 +118,12 @@ with st.sidebar:
         st.markdown(f"<span style='color:{c}; font-size:16px'>■</span> {m}", unsafe_allow_html=True)
 
 uc = USE_CASES[use_case_name]
-st.divider()
-    if st.button("🗑️ Clear all saved data"):
-        st.session_state.scores = {}
-        st.session_state.responses = {}
-        st.session_state.notes = {}
-        save_data()
-        st.success("All data cleared!")
-        st.rerun()
+
 # ============ HEADER ============
 st.title("📊 LLM Benchmarking Dashboard")
 st.caption(
     f"HELM-inspired evaluation · **{use_case_name}** · "
-    "Claude · ChatGPT · Gemini · Deepseek · Zero API cost"
+    "Claude · ChatGPT · Gemini · Llama · Zero API cost"
 )
 
 # ============ TABS ============
@@ -177,7 +141,7 @@ with tab1:
     st.subheader("Prompt to run in each LLM")
     st.info(
         "Copy this exact prompt and run it in **Claude.ai**, **ChatGPT**, **Gemini**, "
-        "and **Deepseek** (Deepseek.com). Then paste each response in Step 2."
+        "and **Llama** (llama.com or meta.ai). Then paste each response in Step 2."
     )
     st.code(uc["prompt"], language=None)
 
@@ -225,9 +189,7 @@ with tab2:
                 label_visibility="collapsed"
             )
             # Always persist immediately
-            if st.session_state.responses.get(persist_key) != new_val:
-    st.session_state.responses[persist_key] = new_val
-    save_data()
+            st.session_state.responses[persist_key] = new_val
 
             if new_val.strip():
                 wc = len(new_val.split())
@@ -314,9 +276,7 @@ with tab3:
                         key=f"slider_{use_case_name}_{model}_{crit}",
                         label_visibility="collapsed"
                     )
-                    if st.session_state.scores.get(score_key) != score:
-    st.session_state.scores[score_key] = score
-    save_data()
+                    st.session_state.scores[score_key] = score
                     model_scores[crit] = score
 
                 # Average badge
@@ -347,9 +307,7 @@ with tab3:
                     placeholder="e.g. 'Fluent but introduced an unsupported refund guarantee'",
                     key=f"note_{use_case_name}_{model}"
                 )
-                if st.session_state.notes.get(note_key) != note:
-    st.session_state.notes[note_key] = note
-    save_data()
+                st.session_state.notes[note_key] = note
 
         st.divider()
 
