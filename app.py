@@ -95,12 +95,463 @@ if "scores" not in st.session_state:
     st.session_state.responses = _saved["responses"]
     st.session_state.notes     = _saved["notes"]
 
+# ============ PRE-LOAD FINANCIAL USE CASE DATA ============
+_FINANCIAL_UC = "Financial Statement Analysis"
+_FINANCIAL_RESPONSES = {
+    "Claude": """# Merck KGaA – Q1 2026 Financial Analysis
+
+1. Key Financial Risks
+
+Revenue Contraction
+Group net sales declined 2.8% YoY to €5,133.7M in Q1 2026. The decline is broad-based, with Healthcare down 3.0% and Electronics down 13.9%, partially offset by Life Science growth of 2.2%.
+
+Persistent FX Headwinds
+Foreign exchange translation remains a significant drag across all segments. At the Group level, FX represented a -€287.8M / -5.4% headwind in Q1 2026 YoY. All three operating divisions show material FX-driven revenue erosion, indicating structural exposure to currency volatility.
+
+Healthcare Margin Compression
+Healthcare EBITDA pre margin contracted sharply to 35.0% in Q1 2026 from 37.6% in Q1 2025 (-270 bps). EBIT declined 23.7% YoY to €536.3M. Depreciation and amortization surged 56.2% YoY, largely driven by a >1,000% increase in intangible asset amortization within cost of sales — consistent with the amortization profile of a recent acquisition (evidenced by €93.4M in acquisition-related revenue in Q1 2026).
+
+Rising Leverage
+Net financial debt stands at €8,318.5M as of 31 March 2026, with a Net Debt / EBITDA pre ratio of 1.4x. While within manageable bounds, this is elevated relative to the 1.2x recorded at end of Q1 2025, reflecting the significant acquisition-driven debt increase in 2025 (FY investing cash outflow of -€4,261.2M).
+
+Elevated Restructuring and Integration Costs
+Total adjustments in Q1 2026 reached €96.0M, up 71.4% YoY. Integration costs alone grew 266.6% YoY to €62.2M, indicating ongoing operational disruption from recent M&A activity.
+
+Profitability Deterioration
+Group EBIT declined 6.8% YoY to €937.2M. Profit before tax fell 9.1% and profit after tax declined 9.4% to €668.8M. EPS (reported) declined 10.1% YoY to €1.52.
+
+2. Growth Opportunities
+
+Life Science Organic Momentum
+Life Science delivered organic revenue growth of 8.3% in Q1 2026 (€183.1M organic delta), the strongest organic performance across all segments. EBITDA pre grew 4.2% YoY to €648.6M, with margins broadly stable at 28.6%. This represents a resilient core business with accelerating organic demand.
+
+Electronics Recovery
+Electronics posted organic growth of €40.2M in Q1 2026, a meaningful improvement following a period of contraction. EBITDA pre surged 15.5% YoY to €282.2M, and the EBITDA pre margin expanded substantially to 34.6% from 25.8% in Q1 2025 — the strongest margin in the segment for the periods disclosed. EBIT rose 69.1% YoY to €163.3M. This suggests a cyclical recovery may be underway.
+
+Strong Operating Cash Generation
+Operating cash flow grew 47.2% YoY to €818.0M in Q1 2026, despite revenue headwinds. This indicates improving cash conversion and supports the capacity to service debt and fund continued investment.
+
+Healthcare Acquisition Integration
+The acquisition absorbed in 2025 (reflected in €93.4M of acquisition-related revenue in Healthcare Q1 2026) has yet to generate full margin contribution, as integration costs remain elevated. If successfully integrated, it presents a meaningful medium-term earnings accretion opportunity.
+
+Improving Cash Position
+Cash and cash equivalents grew 173.0% YoY to €2,743.1M as of 31 March 2026, providing significant liquidity optionality.
+
+3. Overall Company Outlook
+
+Merck KGaA enters Q1 2026 in a transitional phase. The Group's reported financials reflect near-term pressure from three converging factors: FX headwinds, post-acquisition amortization drag in Healthcare, and elevated integration expenditure. These weigh on reported profitability metrics, though the adjusted EBITDA pre (-0.3% YoY, €1,530.1M) suggests the underlying operating business is substantially more stable than headline earnings imply.
+
+The divergence between reported EPS (-10.1%) and EPS pre (-0.5%) is material and signals that the earnings decline is largely driven by non-recurring and acquisition-related items rather than fundamental business deterioration.
+
+Life Science provides a stable, growing foundation. Electronics shows early signs of a recovery cycle. Healthcare's short-term pressure is structural (amortization, integration) rather than demand-driven, given that organic revenue was still negative (-€71.8M), warranting close monitoring.
+
+Key metrics to watch: organic revenue trajectory in Healthcare, Electronics margin sustainability, debt reduction pace, and normalisation of integration costs.
+
+All figures sourced directly from the Merck KGaA Q1 2026 Financial Statements. Interpretations are clearly indicated and based solely on disclosed data.""",
+
+    "ChatGPT": """## 1. Key Financial Risks
+
+Foreign exchange headwinds:
+The report shows a significant negative currency impact across all business sectors. Group net sales were negatively affected by €287.8 million from FX effects in Q1 2026. EBITDA pre was also negatively impacted by €87.4 million due to currency movements.
+
+Declining Healthcare sales and earnings:
+Healthcare net sales declined 3.0% year-over-year in Q1 2026, while Healthcare EBIT fell 23.7%. This indicates pressure on profitability in one of the company's major divisions.
+
+Rising research and development expenses:
+Group R&D costs increased 19.3% year-over-year to €657.7 million in Q1 2026, representing 12.8% of net sales. Healthcare R&D expenses increased 28.1% year-over-year. While strategically important, elevated R&D spending may pressure margins in the near term.
+
+High adjustment and integration costs:
+Integration and IT-related costs rose sharply, increasing 266.6% year-over-year to €62.2 million in Q1 2026. Total adjustments increased 71.4% year-over-year. This suggests ongoing restructuring and integration-related financial burden.
+
+Pressure in Electronics segment:
+Electronics net sales declined 7.1% year-over-year in FY 2025 and remained weak in Q1 2026, with Q1 sales down by €131.6 million year-over-year. EBITDA pre in Electronics had previously declined materially, highlighting earnings volatility in the segment.
+
+## 2. Growth Opportunities
+
+Organic growth across core businesses:
+Despite currency headwinds, Group organic sales growth was positive at 3.1% in Q1 2026. Life Science achieved 4.0% organic growth in FY 2025 and continued growth into Q1 2026.
+
+Strong profitability in Life Science:
+Life Science EBITDA pre increased 4.2% year-over-year to €648.6 million in Q1 2026. EBIT margin improved to 17.8% from 16.6% in the prior-year quarter. This suggests operational resilience and margin improvement potential.
+
+Improved Group profitability margin:
+Group EBITDA pre margin increased to 29.8% in Q1 2026 from 29.1% in Q1 2025. This reflects stable operational performance despite lower sales.
+
+Positive organic EBITDA growth:
+Group EBITDA pre organic growth was 5.7% in Q1 2026. This indicates underlying operational strength excluding FX and acquisition effects.
+
+## 3. Overall Company Outlook
+
+Merck KGaA reported resilient operational performance in Q1 2026 despite lower reported sales and substantial foreign exchange headwinds. Group net sales declined 2.8% year-over-year to €5.1 billion, while EBITDA pre remained broadly stable at €1.53 billion.
+
+The company's outlook appears supported by continued positive organic growth, stable EBITDA pre margins, and strong performance in Life Science. However, the report also indicates ongoing challenges from FX volatility, declining Healthcare profitability, elevated restructuring and integration costs, and continued pressure in Electronics.
+
+Overall, the financial report supports a view of stable underlying operational performance with mixed segment dynamics and continued cost and currency-related pressures.""",
+
+    "Gemini": """Based on the quantitative and qualitative indicators contained within the Q1 2026 financial report of Merck KGaA, the structured summary is as follows:
+
+1. Key Financial Risks
+
+Foreign Exchange (Fx) Headwinds: Adverse foreign exchange impacts significantly constrained performance across all segments. On a Group level, foreign currency fluctuations reduced net sales by €287.8 million and EBITDA pre by €87.4 million during Q1 2026.
+
+Increasing Costs: The Group experienced rising expenses across multiple layers of the profit and loss statement, including a 3.1% YoY increase in the Cost of Sales (€2,068.8 million), a 13.4% rise in Administration expenses (€402.7 million), and a notable 19.3% expansion in Research and Development (R&D) costs (€657.7 million).
+
+Escalating Restructuring and IT/Integration Outlays: Restructuring costs increased by 25.5% YoY to €30.0 million. Simultaneously, IT and Integration costs jumped by 266.6% YoY to €62.2 million.
+
+Contraction in Core Profitability Metrics: Total EBIT decreased by 6.8% YoY to €937.2 million, while Profit After Tax contracted by 9.4% to €668.8 million. Earnings Per Share (EPS) declined by 10.1% YoY to €1.52.
+
+Organic Declines in Healthcare: While other business sectors posted organic expansions, the Healthcare sector reported negative organic sales growth of -€71.8 million and an organic decline in EBITDA pre of -€14.2 million.
+
+2. Growth Opportunities
+
+Organic Performance in Life Science and Electronics: In Q1 2026, Life Science achieved positive organic sales growth of €183.1 million and organic EBITDA pre growth of €45.8 million. Electronics demonstrated an organic expansion of €40.2 million in sales and €73.5 million in EBITDA pre.
+
+Acquisition-Driven Expansion in Healthcare: Despite organic pullbacks, the Healthcare division generated substantial top-line gains via portfolio additions, securing €93.4 million in net sales from acquisitions and adding €4.4 million to its EBITDA pre.
+
+Electronics Profit Margin Optimization: The Electronics business sector expanded its financial performance margins considerably, with its Q1 2026 EBITDA pre margin climbing to 34.6% — up from 23.7% for the full financial year 2025.
+
+3. Overall Company Outlook
+
+Stable Consolidated Net Sales with Underlying Organic Health: On a reported YoY basis, consolidated Group net sales felt slight downward pressure, moving from €5,280.1 million in Q1 2025 to €5,133.7 million in Q1 2026. However, underlying organic baseline adjustments reveal robust core performance, yielding an overall positive organic volume growth of €151.5 million across the Group.
+
+Resilient Non-GAAP Operating Profitability: Despite high operational spending and macroeconomic currency challenges, the Group demonstrated solid operational stability. Consolidated EBITDA pre softened by only an incremental -0.3% YoY to €1,530.1 million (compared to €1,535.1 million in Q1 2025). This resulted in an expanded overall Group EBITDA pre margin of 29.8%, compared to 29.1% in the prior year's opening quarter.""",
+
+    "Deepseek": """Based solely on the provided financial report for Merck KGaA (Q1 2025 – Q1 2026), here is the requested analysis.
+
+1. Top 3 Key Financial Risks
+
+Risk 1: Declining Net Sales in Q1 2026 vs. Q1 2025
+Observed fact: Group net sales decreased from €5,280.1 million (Q1 2025) to €5,133.7 million (Q1 2026).
+Specific figure: YoY change of -€146.5 million (or -2.8% as shown in the Change YoY column on Page 3).
+Inferred conclusion: The company is facing top-line contraction entering 2026, which could pressure profitability if not reversed.
+
+Risk 2: Sharp Contraction in Healthcare Segment EBITDA pre
+Observed fact: Healthcare EBITDA pre (a key profit metric) fell from €795.8 million (Q1 2025) to €718.3 million (Q1 2026).
+Specific figure: YoY change of -€77.5 million (Page 2, bottom section).
+Inferred conclusion: This represents a nearly 10% decline in core operating profitability in the largest segment by margin, signaling possible pricing pressure, cost inflation, or reduced demand.
+
+Risk 3: Negative Operating Cash Flow from Working Capital Changes
+Observed fact: Changes in working capital were -€322.4 million in Q1 2026 (Page 15).
+Specific figure: Within this, trade accounts receivable worsened by -€262.5 million (YoY change -11.6%), and inventories consumed -€144.4 million (YoY change +26.7%).
+Inferred conclusion: The company is tying up more cash in receivables and inventory, which may indicate slower collection cycles or overstocking – a liquidity risk if sustained.
+
+2. Main Growth Opportunities
+
+Opportunity 1: Electronics Segment Margin Expansion
+Observed fact: Electronics EBITDA pre margin increased sharply from 25.8% (Q1 2025) to 34.6% (Q1 2026).
+Specific figure: EBITDA pre in Electronics rose by €37.9 million YoY, from €244.3 million to €282.2 million (Page 2).
+Inferred conclusion: Despite flat or declining sales in some quarters, the segment is becoming significantly more profitable, suggesting operational leverage, cost control, or a shift to higher-margin products.
+
+Opportunity 2: Strong Organic Growth in Life Science
+Observed fact: Life Science organic sales growth (excluding currency and acquisition effects) was +€45.8 million in Q1 2026 vs. Q1 2025.
+Specific figure: Organic Delta = +€45.8 million (Page 2, Life Science row).
+Inferred conclusion: The core Life Science business continues to grow on a like-for-like basis, indicating resilient demand for its products/services.
+
+Opportunity 3: Cash Flow Improvement from Operations
+Observed fact: Operating cash flow increased from €555.8 million (Q1 2025) to €818.0 million (Q1 2026).
+Specific figure: YoY change of +47.2% (Page 15).
+Inferred conclusion: Despite lower net sales, the company is generating substantially more cash from operations, which could be deployed for debt reduction, R&D, or acquisitions.
+
+3. Overall Company Outlook Assessment
+
+Assessment: NEUTRAL
+
+Negative signals: Group net sales declined YoY (-2.8%). Healthcare EBITDA pre fell significantly (-€77.5 million). Working capital absorption increased, especially in receivables and inventory.
+
+Positive signals: Operating cash flow improved strongly (+47.2%). Electronics margin expanded dramatically (+8.8 percentage points). Life Science showed positive organic growth.
+
+Inferred conclusion: The company is not in a clear growth trajectory (declining sales in Q1 2026 vs. Q1 2025), but underlying cash generation and margin improvements in one key segment (Electronics) provide a buffer. The mixed signals across segments and the deterioration in Healthcare suggest caution. Therefore, a neutral outlook is most consistent with the data."""
+}
+
+_FINANCIAL_SCORES = {
+    "Claude":   {"Factual Accuracy": 5, "Clarity": 4, "Hallucination Avoidance": 5, "Financial Terminology": 5, "Source Grounding": 5, "Analytical Sophistication": 5},
+    "ChatGPT":  {"Factual Accuracy": 4, "Clarity": 5, "Hallucination Avoidance": 4, "Financial Terminology": 4, "Source Grounding": 4, "Analytical Sophistication": 4},
+    "Gemini":   {"Factual Accuracy": 3, "Clarity": 3, "Hallucination Avoidance": 3, "Financial Terminology": 5, "Source Grounding": 3, "Analytical Sophistication": 4},
+    "Deepseek": {"Factual Accuracy": 4, "Clarity": 5, "Hallucination Avoidance": 5, "Financial Terminology": 3, "Source Grounding": 5, "Analytical Sophistication": 4},
+}
+
+# Only inject if not already saved by user
+_needs_preload = not any(
+    k.startswith(_FINANCIAL_UC)
+    for k in st.session_state.scores
+)
+if _needs_preload:
+    for _m, _resp in _FINANCIAL_RESPONSES.items():
+        st.session_state.responses[f"resp_{_FINANCIAL_UC}_{_m}"] = _resp
+    for _m, _sc in _FINANCIAL_SCORES.items():
+        for _crit, _val in _sc.items():
+            st.session_state.scores[f"{_FINANCIAL_UC}_{_m}_{_crit}"] = _val
+    save_data()
+
+
+_CS_UC = "Customer Service Chatbot"
+_CS_RESPONSES = {
+    "Claude": """Subject: Re: Your Recent Booking – Duplicate Charge Investigation
+
+Dear Valued Customer,
+
+Thank you for reaching out to us, and please accept our sincere apologies for the frustration this situation has caused. Being charged twice for a booking — and then not receiving a timely resolution — is absolutely not the experience we want for our customers, and we understand your concern completely.
+
+We take billing discrepancies very seriously. To resolve this as quickly as possible, we have escalated your case to our Billing & Payments team, who are authorized to investigate duplicate charges and process refunds directly.
+
+Here is what you can expect next:
+• A member of our Billing team will review your account and confirm the duplicate transaction within 2 business days.
+• Once confirmed, your refund will be initiated. Please note that depending on your bank or card provider, refunds typically appear within 5–10 business days after processing.
+• You will receive an email confirmation as soon as the refund has been issued.
+
+To help us prioritize your case, could you please provide the following details if you haven't already?
+  – Your booking reference number
+  – The email address used at the time of booking
+  – The date(s) the charges appeared on your statement
+
+We genuinely regret that your previous contact did not result in a resolution, and we are committed to making this right. Please do not hesitate to reply to this message directly if you have any further questions — your case is now being handled as a priority.
+
+Thank you for your patience, and we appreciate the opportunity to correct this for you.
+
+Warm regards,
+Customer Relations Team""",
+
+    "ChatGPT": """Dear Customer,
+
+Thank you for reaching out, and I sincerely apologize for the frustration and inconvenience this situation has caused.
+
+I understand how concerning it is to see a duplicate charge while still waiting for a resolution after contacting support previously. In some cases, duplicate charges can occur due to payment authorization delays or processing errors between the bank and booking system.
+
+To help resolve this as quickly as possible, I recommend that we review the transaction details immediately. Please reply with the following information:
+* Your booking reference number
+* The full name on the reservation
+* The dates and amounts of both charges
+* A screenshot or copy of your bank statement showing the duplicate transaction (with sensitive information hidden)
+
+Once we receive these details, we can escalate the case to our billing team for priority review. If a duplicate payment is confirmed, the refund will be processed according to the payment provider's standard processing timelines.
+
+We truly appreciate your patience and apologize again for the delay in resolving this matter. We are committed to assisting you until the issue is fully addressed.
+
+Kind regards,
+Customer Support Team""",
+
+    "Gemini": """Dear Valued Customer,
+
+Thank you for reaching out to us. I am sincerely sorry for the frustration and inconvenience this situation has caused you. Discovering a duplicate charge is stressful enough, and I completely understand how disappointing it is that this was not resolved after your contact last week. This is certainly not the level of service we aim to provide.
+
+I want to help you get this sorted out as quickly as possible.
+
+What Likely Happened:
+When a duplicate charge occurs, it is typically due to one of two reasons:
+* A Processing Glitch: A temporary technical interruption during checkout can occasionally cause the payment gateway to submit the charge twice.
+* An Authorization Hold: Sometimes, the bank places a temporary hold on the funds that looks like a charge, which usually drops off automatically within a few business days.
+
+Next Steps to Resolve This:
+Because your previous request was not finalized, I have personally escalated this issue to our billing and finance department for an immediate priority review.
+
+To ensure we resolve this accurately, could you please reply with a few details?
+* Your Booking Reference (PNR) or ticket number.
+* The date the transactions occurred.
+* A screenshot or copy of the bank statement showing the two identical charges.
+
+What to Expect:
+Once our finance team verifies the duplicate transaction, we will process the refund immediately. Standard billing procedures mean a refund typically takes 5 to 7 business days to reflect in your account, depending entirely on your financial institution's processing times. I will monitor your case personally and send you a confirmation email with the refund receipt the moment it is approved.
+
+Thank you for your patience and for bringing this to our attention again. We appreciate your business and are committed to making this right.
+
+Warm regards,
+Customer Support Team
+Flight Excellence Airlines""",
+
+    "Deepseek": """Subject: Apologies for the double charge and delay in resolving your refund
+
+Dear [Customer Name],
+
+Thank you for reaching out, and I'm truly sorry for the frustration and inconvenience this double charge has caused you. I completely understand how upsetting it must be to see an extra charge on your account, especially after waiting a week without a resolution.
+
+Let me explain what may have happened: Sometimes, during the booking process, a temporary authorization is placed on your card — this can appear as a second charge but is typically reversed automatically within a few business days. However, in some cases, a genuine duplicate transaction occurs due to a system error.
+
+I have personally reviewed your booking record using the email address and flight details associated with your complaint. I can confirm that a duplicate charge was indeed applied to your transaction on [date of booking]. The refund for the duplicate amount of [amount] was initiated on [date], but I see that it has not yet reflected in your account — this delay is unacceptable, and I sincerely apologize for that.
+
+What I will do for you right now:
+I have escalated your case to our billing department with high priority, reference number REF-XXXXXX. They have confirmed that the refund will be processed within 3 business days directly to your original payment method. You do not need to take any further action.
+
+What you can expect from us:
+- You will receive a confirmation email from our billing team within 24 hours.
+- If the refund does not appear in your account by [date + 3 business days], please reply to this email and I will personally ensure a manual reversal via our finance team.
+
+I cannot promise an immediate refund solely from this message, as bank processing times vary, but I can promise that your case is now actively tracked and prioritized.
+
+Again, I deeply regret the frustration this has caused and thank you for your patience. We are committed to making this right.
+
+Best regards,
+[Your Full Name]
+Customer Service Representative
+[Airline Name]
+[Reference/Contact Info]"""
+}
+
+_CS_SCORES = {
+    "Claude":   {"Clarity": 5, "Empathy": 5, "Helpfulness": 4, "Professional Tone": 5, "Hallucination Avoidance": 5, "Robustness": 5},
+    "ChatGPT":  {"Clarity": 5, "Empathy": 4, "Helpfulness": 4, "Professional Tone": 5, "Hallucination Avoidance": 4, "Robustness": 4},
+    "Gemini":   {"Clarity": 4, "Empathy": 5, "Helpfulness": 4, "Professional Tone": 4, "Hallucination Avoidance": 3, "Robustness": 3},
+    "Deepseek": {"Clarity": 4, "Empathy": 5, "Helpfulness": 4, "Professional Tone": 4, "Hallucination Avoidance": 2, "Robustness": 3},
+}
+
+_needs_cs_preload = not any(k.startswith(_CS_UC) for k in st.session_state.scores)
+if _needs_cs_preload:
+    for _m, _resp in _CS_RESPONSES.items():
+        st.session_state.responses[f"resp_{_CS_UC}_{_m}"] = _resp
+    for _m, _sc in _CS_SCORES.items():
+        for _crit, _val in _sc.items():
+            st.session_state.scores[f"{_CS_UC}_{_m}_{_crit}"] = _val
+    save_data()
+
+
+_HR_UC = "HR Recruitment"
+_HR_RESPONSES = {
+    "Claude": """## Candidate Ranking for Marketing Manager Position
+
+### Rank 1: Candidate A
+Overall fit: Strong match across all core requirements
+
+Candidate A meets or exceeds every listed requirement. With 7 years of marketing experience, they surpass the 5-year threshold, and their leadership of 8-person teams directly satisfies the team management criterion. Their digital marketing skill set — SEO, SEM, and social media — aligns precisely with what the role demands. The MBA adds credibility to their strategic capability, and their extensive B2B SaaS background is a standout given that B2B experience is explicitly preferred.
+
+Development areas: Email marketing is not mentioned, which is a minor gap worth exploring in screening.
+
+### Rank 2: Candidate C
+Overall fit: Solid match with some gaps
+
+Candidate C's 6 years of combined marketing and sales experience meets the tenure requirement, and their strong CRM and data analytics background is a genuine differentiator — arguably stronger in this area than Candidate A. Two years of team leadership is a positive, though less extensive than the role may require at a senior level. The mixed sales background could also be an asset in a B2B environment, though no explicit B2B exposure is confirmed. Their digital marketing skills are described as moderate, which is a meaningful gap given the role's emphasis on SEO, SEM, social media, and email.
+
+Development areas: Digital marketing depth and the unconfirmed B2B background are the primary concerns.
+
+### Rank 3: Candidate B
+Overall fit: Does not meet several core requirements at this time
+
+Candidate B's profile presents significant gaps relative to the role's stated requirements. At 3 years of experience, they fall short of the 5-year minimum. There is no indication of team leadership experience, which is a core component of a manager-level role. Analytics experience is explicitly not mentioned, and no B2B background is noted. Their strength in content creation is a genuine asset, but it does not offset the multiple unmet requirements for this particular position.
+
+Development areas: This candidate may be better suited to a senior individual contributor or specialist role, with a path toward management as their career progresses.
+
+This ranking is based solely on the information provided and does not account for interview performance, cultural fit, compensation alignment, or other contextual factors.""",
+
+    "ChatGPT": """## Ranking (Most to Least Suitable)
+
+### 1. Candidate A — Most Suitable
+Candidate A meets or exceeds all of the key job requirements:
+- Marketing experience: 7 years (exceeds the 5+ year requirement)
+- Digital marketing expertise: Strong background in SEO, SEM, and social media
+- Team leadership: Led teams of 8 people
+- B2B experience: Extensive B2B SaaS experience, which aligns with the preferred qualification
+- Additional strength: MBA qualification
+
+Strengths: Strong alignment with every core requirement. Demonstrated leadership experience managing a sizable team. Relevant B2B background is particularly valuable for a Marketing Manager role. Comprehensive digital marketing expertise.
+
+Development Areas: No specific data analytics and reporting experience is mentioned. While this does not mean the candidate lacks these skills, it is not explicitly evidenced in the profile provided.
+
+Overall Assessment: Candidate A shows the strongest overall fit because they satisfy nearly every stated requirement and bring both leadership and B2B marketing experience.
+
+### 2. Candidate C — Suitable with Some Gaps
+Candidate C meets several important requirements:
+- Marketing experience: 6 years of mixed marketing and sales experience
+- Team leadership: 2 years of leadership experience
+- Data analytics and reporting: Strong CRM and data analytics background
+- Digital marketing: Moderate digital marketing skills
+
+Strengths: Meets the minimum experience requirement. Demonstrates leadership experience. Strong analytics and CRM capabilities, which support data-driven marketing decisions. Experience spanning both marketing and sales may provide valuable commercial perspective.
+
+Development Areas: Digital marketing expertise is described only as "moderate," whereas the role specifically seeks expertise in SEO, SEM, social media, and email marketing. No explicit B2B experience is mentioned, so the preferred qualification cannot be confirmed.
+
+Overall Assessment: Candidate C is a credible candidate with strong analytics and leadership capabilities, but ranks behind Candidate A due to less-established digital marketing expertise and the absence of confirmed B2B experience.
+
+### 3. Candidate B — Least Suitable
+Candidate B falls short of several core requirements:
+- Marketing experience: 3 years (below the required 5+ years)
+- Team leadership: No leadership experience mentioned
+- Data analytics and reporting: No analytics experience mentioned
+- Digital marketing: Strong content creation skills, but broader digital marketing expertise is not specified
+
+Strengths: Strong content creation skills, which can be valuable within a marketing team.
+
+Development Areas: Does not meet the minimum experience requirement. No evidence of leadership experience for a managerial role. No stated analytics or reporting background. Limited information demonstrating expertise across the required digital marketing disciplines.
+
+Final Ranking:
+1. Candidate A — Strongest overall match; meets or exceeds nearly all requirements.
+2. Candidate C — Good fit with strong analytics and leadership skills, but some gaps in digital marketing and unconfirmed B2B experience.
+3. Candidate B — Does not meet several core requirements, particularly experience, leadership, and analytics.""",
+
+    "Gemini": """Based on a strict evaluation of the provided profiles against your job requirements, here is the professional ranking of the candidates from most to least suitable.
+
+### 1. Candidate A (Most Suitable)
+Candidate A exceeds all core and preferred requirements, making them the top choice for this position.
+
+Strengths: With 7 years of marketing experience, they comfortably exceed the 5-year benchmark. They possess direct team leadership experience (managing a team of 8) and a strong digital background covering your specific needs in SEO, SEM, and social media. Crucially, they fulfill the preferred qualification with extensive experience in B2B SaaS. Their MBA further supports their readiness for a managerial role.
+
+Development Areas: Their profile does not explicitly detail their specific data analytics and reporting skills, though this is often implicit in B2B SaaS and MBA backgrounds. This would be the primary area to verify during an interview.
+
+### 2. Candidate C (Moderately Suitable)
+Candidate C meets the foundational baseline for the role but has a few gaps compared to Candidate A.
+
+Strengths: They meet the experience requirement with 6 years of mixed marketing and sales experience and have 2 years of proven team leadership. They strongly align with your need for data analytics and reporting due to their robust CRM and data analytics background.
+
+Development Areas: Their digital marketing skills are only rated as "moderate," meaning they may require upskilling to match your digital expertise requirements. Additionally, they lack explicit B2B experience, which is a preferred qualification for this role.
+
+### 3. Candidate B (Least Suitable)
+Candidate B does not currently meet the minimum requirements for a managerial position.
+
+Strengths: They possess strong content creation skills, which is a valuable asset for a marketing team execution layer.
+
+Development Areas: With only 3 years of experience, they fall short of the 5+ years requirement. They also lack the critical leadership experience required for a manager role, having worked only as an individual contributor. Furthermore, they lack the required data analytics experience, and there is no mention of B2B exposure. They would require significant development before being ready for a management-level position.""",
+
+    "Deepseek": """Ranking from most to least suitable:
+1. Candidate A
+2. Candidate C
+3. Candidate B
+
+### Candidate A – Most Suitable
+- Experience: Exceeds the 5+ year requirement with 7 years in marketing.
+- Digital expertise: Explicitly mentions SEO, SEM, and social media – directly matching required areas.
+- Team leadership: Has led teams of 8 people, meeting the leadership requirement.
+- Analytics & reporting: Though not explicitly stated, the MBA and B2B SaaS experience typically imply exposure to data-driven decision-making; however, sticking strictly to given data, the other strengths are sufficient to place them first.
+- B2B experience: Has extensive B2B SaaS experience – preferred qualification met.
+- No stated weaknesses in the provided information relative to requirements.
+
+### Candidate C – Moderately Suitable
+- Experience: 6 years, but mixed marketing and sales – still meets the 5-year threshold.
+- Digital expertise: Listed as "moderate" – meets the requirement but not as strongly as Candidate A.
+- Team leadership: Has 2 years of team leadership – meets the requirement.
+- Analytics & reporting: Strong CRM and data analytics background – directly meets this requirement.
+- B2B experience: No explicit mention – neutral on preferred qualification.
+- Development area: Digital marketing skills are only moderate; mixed sales experience may dilute pure marketing focus.
+
+### Candidate B – Least Suitable
+- Experience: Only 3 years – does not meet the 5+ year requirement.
+- Digital expertise: Strong content creation, but no mention of SEO, SEM, social media, or email – likely insufficient.
+- Team leadership: None mentioned – does not meet requirement.
+- Analytics & reporting: No analytics experience mentioned – does not meet requirement.
+- B2B experience: Not mentioned.
+- Conclusion: Missing three core requirements (experience level, leadership, analytics) and only partially meets digital expertise. Not qualified for the role as described."""
+}
+
+_HR_SCORES = {
+    "Claude":   {"Reasoning Quality": 5, "Fairness": 5, "Explainability": 5, "Consistency": 4, "Professionalism": 5, "Hallucination Avoidance": 5},
+    "ChatGPT":  {"Reasoning Quality": 4, "Fairness": 5, "Explainability": 5, "Consistency": 5, "Professionalism": 4, "Hallucination Avoidance": 4},
+    "Gemini":   {"Reasoning Quality": 4, "Fairness": 5, "Explainability": 4, "Consistency": 5, "Professionalism": 4, "Hallucination Avoidance": 3},
+    "Deepseek": {"Reasoning Quality": 5, "Fairness": 5, "Explainability": 4, "Consistency": 5, "Professionalism": 4, "Hallucination Avoidance": 5},
+}
+
+_needs_hr_preload = not any(k.startswith(_HR_UC) for k in st.session_state.scores)
+if _needs_hr_preload:
+    for _m, _resp in _HR_RESPONSES.items():
+        st.session_state.responses[f"resp_{_HR_UC}_{_m}"] = _resp
+    for _m, _sc in _HR_SCORES.items():
+        for _crit, _val in _sc.items():
+            st.session_state.scores[f"{_HR_UC}_{_m}_{_crit}"] = _val
+    save_data()
+
+
+
 MODELS = ["Claude", "ChatGPT", "Gemini", "Deepseek"]
 MODEL_COLORS = {
     "Claude":   "#C47B2B",
     "ChatGPT":  "#10A37F",
     "Gemini":   "#4285F4",
-    "Deepseek":    "#7C3AED"
+    "Deepseek":    "#993556"
 }
 
 SCORE_RUBRIC = {
@@ -156,7 +607,7 @@ uc = USE_CASES[use_case_name]
 st.title("📊 LLM Benchmarking Dashboard")
 st.caption(
     f"HELM-inspired evaluation · **{use_case_name}** · "
-    "Claude · ChatGPT · Gemini · Deepseek · Zero API cost"
+    "Claude · ChatGPT · Gemini · Llama · Zero API cost"
 )
 
 # ============ TABS ============
@@ -175,7 +626,7 @@ with tab1:
     st.subheader("Prompt to run in each LLM")
     st.info(
         "Copy this exact prompt and run it in **Claude.ai**, **ChatGPT**, **Gemini**, "
-        "and **Deepseek**  Then paste each response in Step 2."
+        "and **Llama** (llama.com or meta.ai). Then paste each response in Step 2."
     )
     st.code(uc["prompt"], language=None)
 
@@ -246,25 +697,70 @@ with tab2:
 # ======================================================
 with tab3:
     st.subheader("Score each response")
-    st.info(
-        "**How to score:** Read each model's response on the left, "
-        "then rate it 1–5 per criterion on the right using the rubric as your guide. "
-        "Add a short qualitative note — you can copy it directly into your paper."
+    st.caption(
+        "Rate each model 1–5 per criterion. "
+        "The scorecard updates live as you adjust sliders. "
+        "Read the response in Step 2 before scoring."
     )
 
     criteria_list = list(uc["criteria"].keys())
 
+    # ---- Pip scorecard CSS ----
+    st.markdown("""
+    <style>
+    .sc-wrap { margin-bottom: 1.5rem; }
+    .sc-totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1rem; }
+    .sc-tcard {
+        border: 0.5px solid rgba(128,128,128,0.2);
+        border-radius: 10px;
+        padding: 12px;
+        text-align: center;
+    }
+    .sc-model { font-size: 12px; opacity: 0.6; margin-bottom: 4px; }
+    .sc-total { font-size: 26px; font-weight: 700; }
+    .sc-out { font-size: 13px; opacity: 0.45; }
+    .sc-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; opacity: 0.65; margin-bottom: 10px; }
+    .sc-legend span { display: flex; align-items: center; gap: 5px; }
+    .sc-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+    .sc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .sc-table thead th {
+        font-size: 12px; font-weight: 500; opacity: 0.6;
+        text-align: left; padding: 6px 8px;
+        border-bottom: 0.5px solid rgba(128,128,128,0.2);
+    }
+    .sc-table thead th:not(:first-child) { text-align: center; }
+    .sc-table tbody tr:hover { background: rgba(128,128,128,0.05); }
+    .sc-table tbody td {
+        padding: 7px 8px;
+        border-bottom: 0.5px solid rgba(128,128,128,0.12);
+    }
+    .sc-table tbody td:not(:first-child) { text-align: center; }
+    .sc-crit { opacity: 0.75; font-size: 12px; }
+    .pip-wrap { display: flex; justify-content: center; gap: 3px; }
+    .pip { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+    .pip-score { font-size: 11px; opacity: 0.6; margin-top: 3px; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # ---- Model color map for pips ----
+    PIP_COLORS = {
+        "Claude":   "#3266ad",
+        "ChatGPT":  "#1D9E75",
+        "Gemini":   "#BA7517",
+        "Deepseek": "#993556",
+    }
+
+    # ---- Sliders (compact, one row per model) ----
+    st.markdown("##### Adjust scores")
     for model in MODELS:
         color = MODEL_COLORS[model]
-        resp_text = st.session_state.responses.get(
-            f"resp_{use_case_name}_{model}", ""
-        ).strip()
+        with st.expander(f"🤖 {model}", expanded=False):
+            col_resp, col_sliders = st.columns([1, 1], gap="large")
 
-        with st.expander(f"🤖 {model}", expanded=True):
-            col_resp, col_scores = st.columns([1, 1], gap="large")
-
-            # ---- LEFT: Response ----
             with col_resp:
+                resp_text = st.session_state.responses.get(
+                    f"resp_{use_case_name}_{model}", ""
+                ).strip()
                 st.markdown("<div class='section-header'>Response</div>", unsafe_allow_html=True)
                 if resp_text:
                     safe = (
@@ -275,7 +771,7 @@ with tab3:
                         .replace("\n", "<br>")
                     )
                     st.markdown(
-                        f"<div class='response-card' style='border-top: 3px solid {color};'>"
+                        f"<div class='response-card' style='border-top:3px solid {color};'>"
                         f"{safe}</div>",
                         unsafe_allow_html=True
                     )
@@ -283,24 +779,17 @@ with tab3:
                 else:
                     st.warning("No response pasted yet — go to Step 2 first.")
 
-            # ---- RIGHT: Scoring ----
-            with col_scores:
-                st.markdown("<div class='section-header'>Scores (1 – 5)</div>", unsafe_allow_html=True)
-                model_scores = {}
-
+            with col_sliders:
+                st.markdown("<div class='section-header'>Scores (1–5)</div>", unsafe_allow_html=True)
                 for crit in criteria_list:
                     crit_desc = uc["criteria"][crit]
                     score_key = f"{use_case_name}_{model}_{crit}"
                     saved_score = st.session_state.scores.get(score_key, 3)
-
                     st.markdown(
-                        f"<div class='rubric-box'>"
-                        f"<strong>{crit}</strong><br>"
-                        f"<span style='font-size:12px; opacity:0.75;'>{crit_desc}</span>"
-                        f"</div>",
+                        f"<div class='rubric-box'><strong>{crit}</strong><br>"
+                        f"<span style='font-size:12px;opacity:0.7;'>{crit_desc}</span></div>",
                         unsafe_allow_html=True
                     )
-
                     score = st.select_slider(
                         label=crit,
                         options=[1, 2, 3, 4, 5],
@@ -311,46 +800,72 @@ with tab3:
                     )
                     st.session_state.scores[score_key] = score
                     save_data()
-                    model_scores[crit] = score  # always set after slider interaction
 
-                # Average badge
-                # Compute average from session_state (same as Step 4) to stay consistent
-                ss_vals = [
-                    st.session_state.scores[f"{use_case_name}_{model}_{c}"]
-                    for c in criteria_list
-                    if f"{use_case_name}_{model}_{c}" in st.session_state.scores
-                ]
-                if ss_vals:
-                    avg = sum(ss_vals) / len(ss_vals)
-                    if avg >= 4:
-                        chip_color = "#28a745"
-                    elif avg >= 3:
-                        chip_color = "#ffc107"
-                    else:
-                        chip_color = "#dc3545"
-                    st.markdown(
-                        f"<div style='margin-top:14px; text-align:right;'>"
-                        f"<span class='score-chip' style='"
-                        f"background:{chip_color}22; color:{chip_color}; "
-                        f"border:1px solid {chip_color}88; font-size:14px; padding:6px 18px;'>"
-                        f"Average: {avg:.2f} / 5</span></div>",
-                        unsafe_allow_html=True
-                    )
-
-                # Qualitative note
-                st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
                 note_key = f"{use_case_name}_{model}_note"
                 note = st.text_area(
                     "Qualitative observation (optional)",
                     value=st.session_state.notes.get(note_key, ""),
-                    height=68,
-                    placeholder="e.g. 'Fluent but introduced an unsupported refund guarantee'",
+                    height=60,
+                    placeholder="e.g. 'Grounded but slightly over-interpreted FX impact'",
                     key=f"note_{use_case_name}_{model}"
                 )
                 st.session_state.notes[note_key] = note
                 save_data()
 
-        st.divider()
+    st.divider()
+
+    # ---- Live pip scorecard ----
+    st.markdown("##### Live scorecard")
+
+    max_total = len(criteria_list) * 5
+    totals = {}
+    for m in MODELS:
+        vals = [st.session_state.scores.get(f"{use_case_name}_{m}_{c}", 0) for c in criteria_list]
+        totals[m] = sum(vals)
+
+    # Totals row HTML
+    totals_html = '<div class="sc-totals">'
+    for m in MODELS:
+        c = PIP_COLORS[m]
+        totals_html += (
+            f'<div class="sc-tcard" style="border-top:3px solid {c};">'            f'<div class="sc-model">{m}</div>'            f'<div class="sc-total" style="color:{c};">{totals[m]}'            f'<span class="sc-out">/{max_total}</span></div></div>'
+        )
+    totals_html += "</div>"
+
+    # Legend HTML
+    legend_html = '<div class="sc-legend">'
+    for m in MODELS:
+        legend_html += f'<span><span class="sc-dot" style="background:{PIP_COLORS[m]};"></span>{m}</span>'
+    legend_html += "</div>"
+
+    # Table HTML
+    header_html = (
+        '<table class="sc-table"><thead><tr>'        '<th>Criterion</th>'
+        + "".join(f"<th>{m}</th>" for m in MODELS)
+        + "</tr></thead><tbody>"
+    )
+
+    rows_html = ""
+    for crit in criteria_list:
+        rows_html += '<tr><td class="sc-crit">' + crit + '</td>'
+        for m in MODELS:
+            sc = st.session_state.scores.get(f"{use_case_name}_{m}_{crit}", 0)
+            pip_cls = m.lower().replace(" ", "")
+            pips = "".join(
+                f'<span class="pip" style="background:{PIP_COLORS[m] if p <= sc else PIP_COLORS[m]+'22'};"></span>'
+                for p in range(1, 6)
+            )
+            rows_html += (
+                f'<td><div class="pip-wrap">{pips}</div>'                f'<div class="pip-score">{sc}/5</div></td>'
+            )
+        rows_html += "</tr>"
+
+    rows_html += "</tbody></table>"
+
+    st.markdown(
+        f'<div class="sc-wrap">{totals_html}{legend_html}{header_html}{rows_html}</div>',
+        unsafe_allow_html=True
+    )
 
 # ======================================================
 # TAB 4: RESULTS & EXPORT
