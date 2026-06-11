@@ -624,7 +624,14 @@ with st.sidebar:
     for score, label in SCORE_RUBRIC.items():
         c = scale_colors[score - 1]
    parts = label.split("—")
-desc = parts[1].strip() if len(parts) > 1 else label
+SCORE_RUBRIC = {
+    1: "Poor — fails to meet the criterion",
+    2: "Below Average — weak performance",
+    3: "Adequate — meets basic expectations",
+    4: "Good — strong performance with minor gaps",
+    5: "Excellent — fully satisfies the criterion"
+}
+desc = label.split("—")[1].strip()
         st.markdown(
             f"<span style='color:{c}; font-weight:700'>{score}</span>"
             f" <span style='font-size:12px; opacity:0.8'>— {desc}</span>",
