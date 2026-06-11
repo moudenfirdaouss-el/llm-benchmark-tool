@@ -611,12 +611,13 @@ st.caption(
 )
 
 # ============ TABS ============
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📋 Step 1 — Prompt",
     "📝 Step 2 — Responses",
     "⭐ Step 3 — Score",
     "📊 Step 4 — Results & Export",
-    "🧠 Hallucination Analysis"
+    "🧠 Hallucination Analysis",
+    "📋 Rubric Scorecard"
 ])
 
 # ======================================================
@@ -929,53 +930,25 @@ with tab4:
 
         st.divider()
 
-        # ---- Radar + Bar ----
-        col_radar, col_bar = st.columns(2)
-
-        with col_radar:
-            st.subheader("📡 Radar — performance by use case")
-            uc_labels = list(USE_CASES.keys())
-            short_labels = [u.replace(" ", "\n") for u in uc_labels]
-            fig_radar = go.Figure()
-            for model in MODELS:
-                vals = [get_avg(uc_n, model) or 0 for uc_n in uc_labels]
-                fig_radar.add_trace(go.Scatterpolar(
-                    r=vals + [vals[0]],
-                    theta=short_labels + [short_labels[0]],
-                    fill="toself",
-                    name=model,
-                    line_color=MODEL_COLORS[model],
-                    fillcolor=MODEL_COLORS[model],
-                    opacity=0.18
-                ))
-            fig_radar.update_layout(
-                polar=dict(radialaxis=dict(visible=True, range=[0, 5], tickfont=dict(size=10))),
-                showlegend=True,
-                height=380,
-                margin=dict(t=20, b=20, l=20, r=20),
-                legend=dict(font=dict(size=12))
-            )
-            st.plotly_chart(fig_radar, use_container_width=True)
-
-        with col_bar:
-            st.subheader("📊 Overall average score")
-            sorted_models = [m for m, _ in ranked]
-            fig_bar = go.Figure(go.Bar(
-                x=sorted_models,
-                y=[overall_avgs.get(m) or 0 for m in sorted_models],
-                marker_color=[MODEL_COLORS[m] for m in sorted_models],
-                text=[f"{overall_avgs.get(m):.2f}" if overall_avgs.get(m) else "—" for m in sorted_models],
-                textposition="outside",
-                width=0.45
-            ))
-            fig_bar.update_layout(
-                yaxis=dict(range=[0, 5.8], title="Score (out of 5)"),
-                xaxis_title="",
-                height=380,
-                showlegend=False,
-                margin=dict(t=20, b=20)
-            )
-            st.plotly_chart(fig_bar, use_container_width=True)
+        # ---- Bar chart (full width) ----
+        st.subheader("📊 Overall average score")
+        sorted_models = [m for m, _ in ranked]
+        fig_bar = go.Figure(go.Bar(
+            x=sorted_models,
+            y=[overall_avgs.get(m) or 0 for m in sorted_models],
+            marker_color=[MODEL_COLORS[m] for m in sorted_models],
+            text=[f"{overall_avgs.get(m):.2f}" if overall_avgs.get(m) else "—" for m in sorted_models],
+            textposition="outside",
+            width=0.35
+        ))
+        fig_bar.update_layout(
+            yaxis=dict(range=[0, 5.8], title="Score (out of 5)"),
+            xaxis_title="",
+            height=340,
+            showlegend=False,
+            margin=dict(t=20, b=20)
+        )
+        st.plotly_chart(fig_bar, use_container_width=True)
 
         st.divider()
 
@@ -1058,41 +1031,6 @@ with tab4:
                             )
 
         st.divider()
-
-        # ---- Heatmap ----
-        st.subheader("🌡️ Full criteria heatmap")
-        heat_z, heat_text, y_labels = [], [], []
-        for uc_n, uc_d in USE_CASES.items():
-            for c in uc_d["criteria"]:
-                row = [get_score(uc_n, m, c) for m in MODELS]
-                heat_z.append(row)
-                heat_text.append([str(v) if v is not None else "—" for v in row])
-                short_uc = uc_n[:16] + ("…" if len(uc_n) > 16 else "")
-                y_labels.append(f"{short_uc} | {c}")
-
-        fig_heat = go.Figure(go.Heatmap(
-            z=heat_z,
-            x=MODELS,
-            y=y_labels,
-            colorscale=[
-                [0.0,  "#f8d7da"],
-                [0.25, "#fd7e14"],
-                [0.5,  "#fff3cd"],
-                [0.75, "#8bc34a"],
-                [1.0,  "#d4edda"]
-            ],
-            zmin=1, zmax=5,
-            text=heat_text,
-            texttemplate="%{text}",
-            showscale=True,
-            colorbar=dict(title="Score", tickvals=[1, 2, 3, 4, 5])
-        ))
-        fig_heat.update_layout(
-            height=max(340, len(heat_z) * 32 + 60),
-            margin=dict(l=230, t=30, b=20, r=20),
-            xaxis=dict(side="top")
-        )
-        st.plotly_chart(fig_heat, use_container_width=True)
 
         st.divider()
 
@@ -1449,6 +1387,196 @@ with tab5:
                 .map(color_avoidance, subset=["Avoidance Score", "Risk Score"])
             )
             st.dataframe(styled_tbl, use_container_width=True, hide_index=True)
+
+
+# ======================================================
+# TAB 6: RUBRIC SCORECARD
+# ======================================================
+with tab6:
+    st.subheader("📋 Rubric Scorecard")
+    st.caption(
+        "Full scoring rubric across all use cases and criteria. "
+        "Each cell shows the score, a pip bar, and a qualitative label. "
+        "Use this view to compare models criterion-by-criterion for your paper."
+    )
+
+    st.markdown("""
+    <style>
+    .rs-wrap { margin-bottom: 2rem; }
+    .rs-uc-title {
+        font-size: 15px; font-weight: 700;
+        margin: 1.5rem 0 0.75rem 0;
+        padding-bottom: 6px;
+        border-bottom: 2px solid rgba(128,128,128,0.15);
+    }
+    .rs-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .rs-table thead th {
+        font-size: 11px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.05em; opacity: 0.55;
+        padding: 8px 10px; text-align: left;
+        border-bottom: 1px solid rgba(128,128,128,0.15);
+    }
+    .rs-table thead th:not(:first-child) { text-align: center; }
+    .rs-table tbody td {
+        padding: 9px 10px;
+        border-bottom: 0.5px solid rgba(128,128,128,0.1);
+        vertical-align: middle;
+    }
+    .rs-table tbody td:not(:first-child) { text-align: center; }
+    .rs-table tbody tr:hover { background: rgba(128,128,128,0.04); }
+    .rs-crit { font-size: 12px; opacity: 0.75; }
+    .rs-crit-desc { font-size: 10px; opacity: 0.45; margin-top: 2px; }
+    .rs-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .rs-pips { display: flex; gap: 2px; }
+    .rs-pip { width: 10px; height: 10px; border-radius: 2px; }
+    .rs-score-lbl { font-size: 13px; font-weight: 700; }
+    .rs-badge {
+        font-size: 9px; font-weight: 600;
+        padding: 1px 6px; border-radius: 99px;
+        display: inline-block; margin-top: 1px;
+    }
+    .rs-totals-row {
+        display: grid; gap: 10px; margin-bottom: 1.5rem;
+    }
+    .rs-total-card {
+        border: 0.5px solid rgba(128,128,128,0.2);
+        border-radius: 10px; padding: 12px 10px; text-align: center;
+    }
+    .rs-total-model { font-size: 12px; opacity: 0.6; margin-bottom: 4px; }
+    .rs-total-score { font-size: 24px; font-weight: 700; }
+    .rs-total-out { font-size: 12px; opacity: 0.4; }
+    </style>
+    """, unsafe_allow_html=True)
+
+    PIP_COLORS_RS = {
+        "Claude":   "#3266ad",
+        "ChatGPT":  "#1D9E75",
+        "Gemini":   "#BA7517",
+        "Deepseek": "#993556",
+    }
+
+    def rs_badge(score):
+        if score >= 5:   return ("Excellent", "#1a9e5c", "#e6f9f0")
+        if score >= 4:   return ("Good",      "#1a9e5c", "#e6f9f0")
+        if score == 3:   return ("Adequate",  "#b8860b", "#fdf8e1")
+        if score == 2:   return ("Weak",      "#c0392b", "#fdecea")
+        return                  ("Poor",      "#c0392b", "#fdecea")
+
+    # ---- Grand total cards ----
+    n_models = len(MODELS)
+    st.markdown(
+        f'<div class="rs-totals-row" style="grid-template-columns: repeat({n_models}, 1fr);">',
+        unsafe_allow_html=True
+    )
+    grand_totals_html = ""
+    for m in MODELS:
+        total = sum(
+            st.session_state.scores.get(f"{uc_n}_{m}_{c}", 0)
+            for uc_n, uc_d in USE_CASES.items()
+            for c in uc_d["criteria"]
+        )
+        max_total = sum(5 for uc_d in USE_CASES.values() for _ in uc_d["criteria"])
+        c = PIP_COLORS_RS[m]
+        grand_totals_html += (
+            f'<div class="rs-total-card" style="border-top: 3px solid {c};">'
+            f'<div class="rs-total-model">{m}</div>'
+            f'<div class="rs-total-score" style="color:{c};">{total}'
+            f'<span class="rs-total-out">/{max_total}</span></div>'
+            f'<div style="font-size:10px;opacity:0.45;margin-top:2px;">grand total</div>'
+            f'</div>'
+        )
+    st.markdown(
+        f'<div class="rs-totals-row" style="grid-template-columns: repeat({n_models}, 1fr);">'
+        f'{grand_totals_html}</div>',
+        unsafe_allow_html=True
+    )
+
+    st.divider()
+
+    # ---- Per use case rubric table ----
+    for uc_n, uc_d in USE_CASES.items():
+        crit_keys = list(uc_d["criteria"].keys())
+        has_data = any(
+            st.session_state.scores.get(f"{uc_n}_{m}_{c}")
+            for m in MODELS for c in crit_keys
+        )
+        if not has_data:
+            continue
+
+        # Use case total row
+        uc_totals = {}
+        for m in MODELS:
+            uc_totals[m] = sum(
+                st.session_state.scores.get(f"{uc_n}_{m}_{c}", 0)
+                for c in crit_keys
+            )
+        uc_max = len(crit_keys) * 5
+
+        # Header
+        totals_str = "  ·  ".join(
+            f'<span style="color:{PIP_COLORS_RS[m]}; font-weight:600;">{m} {uc_totals[m]}/{uc_max}</span>'
+            for m in MODELS
+        )
+        st.markdown(
+            f'<div class="rs-uc-title">{uc_n} &nbsp;&nbsp; <span style="font-size:12px; font-weight:400; opacity:0.6;">{totals_str}</span></div>',
+            unsafe_allow_html=True
+        )
+
+        # Table
+        header = (
+            '<table class="rs-table"><thead><tr>'
+            '<th>Criterion</th>'
+            + "".join(f'<th>{m}</th>' for m in MODELS)
+            + '</tr></thead><tbody>'
+        )
+
+        rows = ""
+        for crit in crit_keys:
+            desc = uc_d["criteria"][crit]
+            rows += (
+                f'<tr><td><div class="rs-crit">{crit}</div>'
+                f'<div class="rs-crit-desc">{desc}</div></td>'
+            )
+            for m in MODELS:
+                sc = st.session_state.scores.get(f"{uc_n}_{m}_{crit}", 0)
+                mc = PIP_COLORS_RS[m]
+                pips = "".join(
+                    f'<span class="rs-pip" style="background:{mc if p <= sc else mc+'22'};"></span>'
+                    for p in range(1, 6)
+                )
+                lbl, lbl_color, lbl_bg = rs_badge(sc)
+                rows += (
+                    f'<td><div class="rs-cell">'
+                    f'<div class="rs-pips">{pips}</div>'
+                    f'<div class="rs-score-lbl" style="color:{mc};">{sc}/5</div>'
+                    f'<span class="rs-badge" style="background:{lbl_bg}; color:{lbl_color}; border: 1px solid {lbl_color}44;">{lbl}</span>'
+                    f'</div></td>'
+                )
+            rows += "</tr>"
+
+        rows += "</tbody></table>"
+        st.markdown(f'<div class="rs-wrap">{header}{rows}</div>', unsafe_allow_html=True)
+
+    st.divider()
+
+    # ---- Legend ----
+    st.markdown("**Score legend:**")
+    legend_cols = st.columns(5)
+    legend_items = [
+        ("5 — Excellent", "#1a9e5c", "#e6f9f0"),
+        ("4 — Good",      "#1a9e5c", "#e6f9f0"),
+        ("3 — Adequate",  "#b8860b", "#fdf8e1"),
+        ("2 — Weak",      "#c0392b", "#fdecea"),
+        ("1 — Poor",      "#c0392b", "#fdecea"),
+    ]
+    for i, (lbl, color, bg) in enumerate(legend_items):
+        with legend_cols[i]:
+            st.markdown(
+                f'<div style="background:{bg}; color:{color}; border:1px solid {color}44; '
+                f'border-radius:6px; padding:6px 10px; text-align:center; font-size:12px; font-weight:600;">'
+                f'{lbl}</div>',
+                unsafe_allow_html=True
+            )
 
 
 st.divider()
