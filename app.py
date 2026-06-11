@@ -1053,114 +1053,33 @@ with tab5:
         st.divider()
 
         # ---- Bar ----
-        # ---- Bar ----
-st.subheader("📊 Overall average score")
+        st.subheader("📊 Overall average score")
 
-sorted_models = [m for m, _ in ranked]
+        sorted_models = [m for m, _ in ranked]
 
-fig_bar = go.Figure(go.Bar(
-    x=sorted_models,
-    y=[overall_avgs.get(m) or 0 for m in sorted_models],
-    marker_color=[MODEL_COLORS[m] for m in sorted_models],
-    text=[
-        f"{overall_avgs.get(m):.2f}"
-        if overall_avgs.get(m)
-        else "—"
-        for m in sorted_models
-    ],
-    textposition="outside",
-    width=0.45
-))
+        fig_bar = go.Figure(go.Bar(
+            x=sorted_models,
+            y=[overall_avgs.get(m) or 0 for m in sorted_models],
+            marker_color=[MODEL_COLORS[m] for m in sorted_models],
+            text=[
+                f"{overall_avgs.get(m):.2f}"
+                if overall_avgs.get(m)
+                else "—"
+                for m in sorted_models
+            ],
+            textposition="outside",
+            width=0.45
+        ))
 
-fig_bar.update_layout(
-    yaxis=dict(range=[0, 5.8], title="Score (out of 5)"),
-    xaxis_title="",
-    height=380,
-    showlegend=False,
-    margin=dict(t=20, b=20)
-)
+        fig_bar.update_layout(
+            yaxis=dict(range=[0, 5.8], title="Score (out of 5)"),
+            xaxis_title="",
+            height=380,
+            showlegend=False,
+            margin=dict(t=20, b=20)
+        )
 
-st.plotly_chart(fig_bar, use_container_width=True)
-
-        # ---- Per use case breakdown ----
-        st.subheader("🔍 Breakdown by use case and criterion")
-
-        for uc_n, uc_d in USE_CASES.items():
-            crit_keys = list(uc_d["criteria"].keys())
-            has_uc = any(get_score(uc_n, m, c) is not None for m in MODELS for c in crit_keys)
-            if not has_uc:
-                continue
-
-            with st.expander(f"📁 {uc_n}", expanded=True):
-                rows = []
-                for c in crit_keys:
-                    row = {"Criterion": c}
-                    for m in MODELS:
-                        row[m] = get_score(uc_n, m, c)
-                    rows.append(row)
-                df = pd.DataFrame(rows)
-
-                col_tbl, col_chart = st.columns([1, 1.6])
-
-                with col_tbl:
-                    def color_score(val):
-                        if val is None:
-                            return ""
-                        if val >= 4:
-                            return "background-color:#d4edda; color:#155724"
-                        if val >= 3:
-                            return "background-color:#fff3cd; color:#856404"
-                        return "background-color:#f8d7da; color:#721c24"
-
-                    styled = (
-                        df.set_index("Criterion")
-                        .style
-                        .map(color_score, subset=MODELS)
-                        .format("{:.0f}", na_rep="—")
-                    )
-                    st.dataframe(styled, use_container_width=True, height=len(crit_keys) * 38 + 42)
-
-                    uc_avgs = {m: get_avg(uc_n, m) for m in MODELS}
-                    valid = {m: v for m, v in uc_avgs.items() if v is not None}
-                    if valid:
-                        winner = max(valid, key=lambda m: valid[m])
-                        st.success(f"**Best:** {winner} ({valid[winner]:.2f}/5)")
-
-                with col_chart:
-                    df_melt = df.melt(
-                        id_vars="Criterion", var_name="Model", value_name="Score"
-                    ).dropna()
-                    fig_uc = px.bar(
-                        df_melt, x="Criterion", y="Score", color="Model",
-                        barmode="group",
-                        color_discrete_map=MODEL_COLORS,
-                        text_auto=True
-                    )
-                    fig_uc.update_layout(
-                        yaxis=dict(range=[0, 5.8], title="Score (1–5)"),
-                        xaxis_title="",
-                        height=310,
-                        margin=dict(t=10, b=10),
-                        xaxis_tickangle=-20,
-                        legend=dict(font=dict(size=11))
-                    )
-                    st.plotly_chart(fig_uc, use_container_width=True)
-
-                notes_for_uc = {
-                    m: st.session_state.notes.get(f"{uc_n}_{m}_note", "")
-                    for m in MODELS
-                }
-                if any(v.strip() for v in notes_for_uc.values()):
-                    st.markdown("**Qualitative observations:**")
-                    for m, note in notes_for_uc.items():
-                        if note.strip():
-                            st.markdown(
-                                f"<span style='color:{MODEL_COLORS[m]}; font-weight:600;'>"
-                                f"{m}:</span> {note}",
-                                unsafe_allow_html=True
-                            )
-
-        st.divider()
+        st.plotly_chart(fig_bar, use_container_width=True)
 
         # ---- Heatmap ----
         st.subheader("🌡️ Full criteria heatmap")
