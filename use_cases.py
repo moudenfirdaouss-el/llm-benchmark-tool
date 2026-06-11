@@ -21,17 +21,6 @@ Do not fabricate or assume any financial figures.""",
         "Evidence Grounding": "Uses only information contained in the financial report and avoids unsupported assumptions."
     },
 
-    "scoring_guide": """Evaluate this financial analysis response.
-```
-
-Key things to look for:
-
-* Does it correctly distinguish facts from inferences?
-* Does it avoid inventing specific figures?
-* Does it use financial terminology accurately?
-* Does it provide meaningful business interpretation?"""
-  },
-
   "Customer Service Chatbot": {
   "prompt": """You are a customer service representative for an international airline.
 
@@ -63,16 +52,6 @@ Requirements:
         "Evidence Grounding": "Uses only information provided in the complaint and avoids inventing policies or guarantees."
     },
 
-    "scoring_guide": """Evaluate this customer service chatbot response.
-  ```
-
-Key things to look for:
-
-* Does it express genuine empathy without sounding scripted?
-* Are the proposed next steps realistic and actionable?
-* Does it avoid making promises it cannot keep?
-* Is the tone professional but human?"""
-  },
 
   "HR Recruitment": {
   "prompt": """You are a senior HR specialist.
@@ -118,16 +97,4 @@ INSTRUCTIONS:
         "Hallucination Avoidance": "Does it avoid inventing candidate details not in the profiles?",
         "Evidence Grounding": "Ranks candidates using only supplied qualifications and avoids unsupported assumptions."
     },
-
-    "scoring_guide": """Evaluate this HR recruitment response.
-  ```
-
-Key things to look for:
-
-* Is the reasoning explicitly tied to the stated job requirements?
-* Does the model avoid inventing qualifications or background not stated?
-* Does it treat all candidates fairly and professionally?
-* Does it acknowledge nuance (e.g. Candidate C's mixed profile)?
-* Is the final ranking internally consistent with the reasoning?"""
-  }
   }
