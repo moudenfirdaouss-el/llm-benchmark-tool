@@ -17,8 +17,7 @@ Do not fabricate or assume any financial figures.""",
         "Hallucination Avoidance": "Does the model avoid fabricating unsupported financial information?",
         "Financial Terminology": "Are concepts like EBITDA, margins, leverage, FX used correctly?",
         "Source Grounding": "Are conclusions directly tied to the source document, not assumptions?",
-        "Analytical Sophistication": "Does it provide meaningful interpretation beyond just listing facts?",
-        "Evidence Grounding": "Uses only information contained in the financial report and avoids unsupported assumptions."
+        "Analytical Sophistication": "Does it provide meaningful interpretation beyond just listing facts?"
     },
 
   "Customer Service Chatbot": {
@@ -48,8 +47,7 @@ Requirements:
         "Helpfulness": "Does it address the problem with actionable next steps?",
         "Professional Tone": "Is the communication appropriate for business customer service?",
         "Hallucination Avoidance": "Does it avoid fabricating specific policies, timelines, or guarantees?",
-        "Robustness": "Does it stay calm and professional without over-promising or deflecting?",
-        "Evidence Grounding": "Uses only information provided in the complaint and avoids inventing policies or guarantees."
+        "Robustness": "Does it stay calm and professional without over-promising or deflecting?"
     },
 
 
@@ -95,6 +93,5 @@ INSTRUCTIONS:
         "Consistency": "Is the ranking coherent and free of internal contradictions?",
         "Professionalism": "Is the tone appropriate for HR and recruitment communication?",
         "Hallucination Avoidance": "Does it avoid inventing candidate details not in the profiles?",
-        "Evidence Grounding": "Ranks candidates using only supplied qualifications and avoids unsupported assumptions."
     },
   }
