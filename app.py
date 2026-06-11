@@ -618,26 +618,32 @@ RANK_COLORS = ["#B8860B", "#708090", "#8B4513", "#555555"]
 with st.sidebar:
     st.markdown("## ⚙️ Settings")
     use_case_name = st.selectbox("Use case", list(USE_CASES.keys()))
+
     st.divider()
+
     st.markdown("**Scoring scale (1–5):**")
-    scale_colors = ["#dc3545", "#fd7e14", "#ffc107", "#28a745", "#0d6efd"]
+
+    scale_colors = [
+        "#dc3545",
+        "#fd7e14",
+        "#ffc107",
+        "#28a745",
+        "#0d6efd"
+    ]
+
     for score, label in SCORE_RUBRIC.items():
         c = scale_colors[score - 1]
-   parts = label.split("—")
-SCORE_RUBRIC = {
-    1: "Poor — fails to meet the criterion",
-    2: "Below Average — weak performance",
-    3: "Adequate — meets basic expectations",
-    4: "Good — strong performance with minor gaps",
-    5: "Excellent — fully satisfies the criterion"
-}
-desc = label.split("—")[1].strip()
+
+        desc = label.split("—")[1].strip()
+
         st.markdown(
             f"<span style='color:{c}; font-weight:700'>{score}</span>"
             f" <span style='font-size:12px; opacity:0.8'>— {desc}</span>",
             unsafe_allow_html=True
         )
+
     st.divider()
+
     st.markdown("**Workflow:**")
     st.markdown("""
 1. Copy the prompt → Step 1
@@ -646,20 +652,6 @@ desc = label.split("—")[1].strip()
 4. View charts & rankings → Step 4
 5. Export CSV for your paper
     """)
-    st.divider()
-    st.markdown("**Models:**")
-    for m, c in MODEL_COLORS.items():
-        st.markdown(f"<span style='color:{c}; font-size:16px'>■</span> {m}", unsafe_allow_html=True)
-    st.divider()
-    if st.button("🗑️ Clear all saved data", use_container_width=True):
-        st.session_state.scores    = {}
-        st.session_state.responses = {}
-        st.session_state.notes     = {}
-        save_data()
-        st.success("All data cleared.")
-        st.rerun()
-
-uc = USE_CASES[use_case_name]
 
 # ============ HEADER ============
 st.title("📊 LLM Benchmarking Dashboard")
