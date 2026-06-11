@@ -747,13 +747,13 @@ RUBRICS = {
     },
 }
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📋 Step 1 — Prompt",
-    "📝 Step 2 — Responses",
-    "⭐ Step 3 — Score",
-    "📊 Step 4 — Results & Export",
+tab1, tab2, tab6, tab3, tab4, tab5 = st.tabs([
+    "📋 Prompt",
+    "📝 Responses",
+    "📋 Scoring Rubric",
+    "⭐ Score",
+    "📊 Results & Export",
     "🧠 Hallucination Analysis",
-    "📋 Rubric Scorecard"
 ])
 
 # ======================================================
@@ -842,33 +842,7 @@ with tab3:
 
     criteria_list = list(uc["criteria"].keys())
 
-    # ---- Rubric reference tables (before sliders) ----
-    with st.expander("📋 Scoring rubric for this use case", expanded=False):
-        st.caption("Use this as a reference when assigning scores below.")
-        uc_rubric = RUBRICS.get(use_case_name, {})
-        if uc_rubric:
-            crit_items = list(uc_rubric.items())
-            for i in range(0, len(crit_items), 2):
-                rb_cols = st.columns(2)
-                for j, rb_col in enumerate(rb_cols):
-                    if i + j >= len(crit_items):
-                        break
-                    crit_name, scores_dict = crit_items[i + j]
-                    with rb_col:
-                        df_rubric = pd.DataFrame([
-                            {"Score": sc, crit_name: desc}
-                            for sc, desc in sorted(scores_dict.items(), reverse=True)
-                        ])
-                        st.dataframe(
-                            df_rubric,
-                            use_container_width=True,
-                            hide_index=True,
-                            height=212
-                        )
-        else:
-            st.info("No rubric defined for this use case yet.")
 
-    st.divider()
 
     # ---- Pip scorecard CSS ----
     st.markdown("""
@@ -1557,14 +1531,14 @@ with tab5:
 # TAB 6: RUBRIC SCORECARD
 # ======================================================
 with tab6:
-    st.subheader("📋 Scoring Rubric")
+    st.subheader(f"📋 Scoring Rubric — {use_case_name}")
     st.caption(
-        "Reference guide: what each score (1–5) means per criterion and use case. "
-        "Open this tab before scoring in Step 3."
+        "Reference guide: what each score (1–5) means for each criterion. "
+        "Switch use cases in the sidebar to see the relevant rubric."
     )
 
-    for uc_n, uc_rubric in RUBRICS.items():
-        st.markdown(f"### 📁 {uc_n}")
+    uc_rubric = RUBRICS.get(use_case_name, {})
+    if uc_rubric:
         crit_items = list(uc_rubric.items())
         for i in range(0, len(crit_items), 2):
             rb_cols = st.columns(2)
@@ -1583,7 +1557,8 @@ with tab6:
                         hide_index=True,
                         height=212
                     )
-        st.divider()
+    else:
+        st.info("No rubric defined for this use case.")
 
 
 st.divider()
