@@ -555,11 +555,61 @@ MODEL_COLORS = {
 }
 
 SCORE_RUBRIC = {
-    1: "Poor — fails to meet the criterion",
-    2: "Below average — partial or weak attempt",
-    3: "Adequate — meets the criterion at a basic level",
-    4: "Good — clearly meets the criterion with minor gaps",
-    5: "Excellent — fully meets the criterion with depth and precision"
+    1: "Poor",
+    2: "Below Average",
+    3: "Adequate",
+    4: "Good",
+    5: "Excellent"
+}
+
+ACADEMIC_RUBRICS = {
+    "Clarity": {
+        1: "Very unclear and difficult to follow",
+        2: "Frequently confusing",
+        3: "Understandable but contains ambiguity",
+        4: "Mostly clear and easy to follow",
+        5: "Extremely clear, concise and well-structured"
+    },
+
+    "Empathy": {
+        1: "No acknowledgement of stakeholder concerns",
+        2: "Minimal acknowledgement",
+        3: "Basic acknowledgement but formulaic",
+        4: "Shows genuine concern",
+        5: "Highly empathetic and human-centred"
+    },
+
+    "Professional Tone": {
+        1: "Unprofessional language",
+        2: "Inconsistent professionalism",
+        3: "Acceptable business tone",
+        4: "Professional throughout",
+        5: "Highly professional and audience-appropriate"
+    },
+
+    "Helpfulness": {
+        1: "Provides no useful guidance",
+        2: "Limited practical value",
+        3: "Some actionable information",
+        4: "Clear next steps",
+        5: "Comprehensive and actionable guidance"
+    },
+
+    "Hallucination Avoidance": {
+        1: "Many fabricated claims",
+        2: "Several unsupported assertions",
+        3: "Some unverifiable statements",
+        4: "Mostly grounded in provided information",
+        5: "Fully grounded and evidence-based"
+    },
+
+    "Evidence Grounding": {
+        1: "Frequently invents facts",
+        2: "Weak connection to source information",
+        3: "Uses some source information correctly",
+        4: "Strongly supported by provided evidence",
+        5: "Every major claim is traceable to provided evidence"
+    }
 }
 
 RANK_COLORS = ["#B8860B", "#708090", "#8B4513", "#555555"]
@@ -611,14 +661,14 @@ st.caption(
 )
 
 # ============ TABS ============
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📋 Step 1 — Prompt",
     "📝 Step 2 — Responses",
     "⭐ Step 3 — Score",
+    "📖 Rubric Guide",
     "📊 Step 4 — Results & Export",
     "🧠 Hallucination Analysis"
 ])
-
 # ======================================================
 # TAB 1: PROMPT
 # ======================================================
@@ -866,11 +916,97 @@ with tab3:
         f'<div class="sc-wrap">{totals_html}{legend_html}{header_html}{rows_html}</div>',
         unsafe_allow_html=True
     )
+confidence_key = f"{use_case_name}_{model}_confidence"
+
+confidence = st.slider(
+    "Confidence in your rating",
+    min_value=1,
+    max_value=5,
+    value=st.session_state.notes.get(confidence_key, 3),
+    key=confidence_key
+)
+
+st.session_state.notes[confidence_key] = confidence
+save_data()
 
 # ======================================================
-# TAB 4: RESULTS & EXPORT
+# TAB 4: RUBRIC GUIDE
 # ======================================================
 with tab4:
+
+    st.header("📖 Evaluation Rubrics")
+
+    st.info("""
+    Responses are evaluated using a structured
+    rubric-based methodology.
+
+    Score Range:
+    1 = Poor
+    2 = Below Average
+    3 = Adequate
+    4 = Good
+    5 = Excellent
+    """)
+
+    for criterion, levels in ACADEMIC_RUBRICS.items():
+
+        st.subheader(criterion)
+
+        rubric_df = pd.DataFrame({
+            "Score": list(levels.keys()),
+            "Definition": list(levels.values())
+        })
+
+        st.table(rubric_df)
+
+    st.divider()
+
+    st.subheader("Methodological Notes")
+
+    st.markdown("""
+    - Human evaluation was used because criteria such as empathy,
+      professionalism and reasoning quality are difficult to
+      assess automatically.
+
+    - All models were evaluated using identical prompts.
+
+    - Scores were assigned using predefined rubrics.
+
+    - Results should be interpreted as structured human judgement
+      rather than objective truth.
+    """)
+
+    st.subheader("Limitations")
+
+    st.markdown("""
+    - Single evaluator scoring may introduce subjectivity.
+    - Inter-rater reliability was not measured.
+    - Results depend on prompt wording and model version.
+    - Scores reflect observed outputs rather than general model capability.
+    """)
+# ======================================================
+# TAB 5: RESULTS & EXPORT
+# ======================================================
+
+st.success("""
+Research Design
+
+Domains:
+• Finance
+• Customer Service
+• HR
+
+Models:
+• Claude
+• ChatGPT
+• Gemini
+• DeepSeek
+
+Method:
+Rubric-based human evaluation using a
+1–5 scoring framework.
+""")
+with tab5:
     all_scores_flat = st.session_state.scores
 
     has_data = any(
@@ -929,34 +1065,10 @@ with tab4:
 
         st.divider()
 
-        # ---- Radar + Bar ----
-        col_radar, col_bar = st.columns(2)
+        # ---- Bar ----
+        st.subheader("📊 Overall average score")
 
-        with col_radar:
-            st.subheader("📡 Radar — performance by use case")
-            uc_labels = list(USE_CASES.keys())
-            short_labels = [u.replace(" ", "\n") for u in uc_labels]
-            fig_radar = go.Figure()
-            for model in MODELS:
-                vals = [get_avg(uc_n, model) or 0 for uc_n in uc_labels]
-                fig_radar.add_trace(go.Scatterpolar(
-                    r=vals + [vals[0]],
-                    theta=short_labels + [short_labels[0]],
-                    fill="toself",
-                    name=model,
-                    line_color=MODEL_COLORS[model],
-                    fillcolor=MODEL_COLORS[model],
-                    opacity=0.18
-                ))
-            fig_radar.update_layout(
-                polar=dict(radialaxis=dict(visible=True, range=[0, 5], tickfont=dict(size=10))),
-                showlegend=True,
-                height=380,
-                margin=dict(t=20, b=20, l=20, r=20),
-                legend=dict(font=dict(size=12))
-            )
-            st.plotly_chart(fig_radar, use_container_width=True)
-
+        
         with col_bar:
             st.subheader("📊 Overall average score")
             sorted_models = [m for m, _ in ranked]
@@ -1149,9 +1261,9 @@ with tab4:
                     st.markdown(f"- **{label}:** {note}")
 
 # ======================================================
-# TAB 5: HALLUCINATION LEADERBOARD
+# TAB 6: HALLUCINATION LEADERBOARD
 # ======================================================
-with tab5:
+with tab6:
 
     # ---- CSS for leaderboard ----
     st.markdown("""
