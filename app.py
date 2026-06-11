@@ -611,6 +611,142 @@ st.caption(
 )
 
 # ============ TABS ============
+
+RUBRICS = {
+    "Financial Statement Analysis": {
+        "Factual Accuracy": {
+            5: "All figures and claims are correct and fully supported by the report",
+            4: "Minor inaccuracies that do not affect the overall conclusion",
+            3: "Some figures correct but notable errors or omissions present",
+            2: "Several factual errors or unsupported claims",
+            1: "Largely inaccurate or fabricated financial data",
+        },
+        "Clarity": {
+            5: "Extremely clear, well-structured, easy to follow for a business audience",
+            4: "Mostly clear with minor ambiguity or structural issues",
+            3: "Understandable but somewhat disorganised or verbose",
+            2: "Difficult to follow; lacks structure or coherence",
+            1: "Very unclear, confusing, or unreadable",
+        },
+        "Hallucination Avoidance": {
+            5: "No fabricated information; all claims traceable to the source document",
+            4: "One minor unsupported inference that does not mislead",
+            3: "Some interpretations go beyond the data without clear flagging",
+            2: "Multiple unsupported claims or invented figures",
+            1: "Significant fabrication; key figures or facts invented",
+        },
+        "Financial Terminology": {
+            5: "All terms (EBITDA, organic growth, leverage, FX) used correctly and precisely",
+            4: "Terminology mostly correct with one minor misuse",
+            3: "Basic terms used correctly but advanced concepts misused or avoided",
+            2: "Several terminology errors that affect interpretation",
+            1: "Financial terms used incorrectly throughout",
+        },
+        "Source Grounding": {
+            5: "Every conclusion explicitly linked to a specific figure or statement in the report",
+            4: "Most conclusions grounded; one or two inferences not explicitly cited",
+            3: "Mix of grounded and ungrounded conclusions",
+            2: "Many conclusions lack clear grounding in the source",
+            1: "Conclusions largely disconnected from the source document",
+        },
+        "Analytical Sophistication": {
+            5: "Provides deep, nuanced interpretation beyond surface-level reading",
+            4: "Solid analysis with meaningful interpretation of trends",
+            3: "Describes data adequately but limited interpretive depth",
+            2: "Mostly descriptive with little analytical value",
+            1: "No meaningful analysis; purely lists numbers",
+        },
+    },
+    "Customer Service Chatbot": {
+        "Clarity": {
+            5: "Response is immediately clear; customer knows exactly what to do next",
+            4: "Mostly clear with one minor ambiguity",
+            3: "Understandable but some parts are vague or confusing",
+            2: "Customer would likely be confused about next steps",
+            1: "Very unclear; response does not communicate effectively",
+        },
+        "Empathy": {
+            5: "Warm, genuine, human tone that fully acknowledges the customer's frustration",
+            4: "Empathetic but slightly formulaic or scripted",
+            3: "Acknowledges the issue but tone feels impersonal",
+            2: "Minimal empathy; response feels cold or transactional",
+            1: "No empathy; ignores the emotional dimension entirely",
+        },
+        "Helpfulness": {
+            5: "Provides clear, actionable next steps that directly solve the problem",
+            4: "Helpful with minor gaps in the resolution steps",
+            3: "Partially helpful but leaves key questions unanswered",
+            2: "Provides little actionable guidance",
+            1: "Does not help resolve the issue at all",
+        },
+        "Professional Tone": {
+            5: "Perfectly professional; appropriate for a formal business communication",
+            4: "Professional with very minor lapses in tone",
+            3: "Mostly professional but occasionally informal or awkward",
+            2: "Tone frequently inappropriate for a customer service context",
+            1: "Unprofessional tone throughout",
+        },
+        "Hallucination Avoidance": {
+            5: "No invented policies, timelines, or guarantees; all claims realistic",
+            4: "One minor over-promise that is unlikely to cause harm",
+            3: "Some statements go beyond what can realistically be guaranteed",
+            2: "Multiple fabricated policies or unrealistic commitments",
+            1: "Invents specific refund dates, case numbers, or policies not available",
+        },
+        "Robustness": {
+            5: "Stays fully calm, professional, and consistent under the complaint pressure",
+            4: "Mostly robust with one minor inconsistency",
+            3: "Generally stable but slightly over-promises or deflects",
+            2: "Noticeably inconsistent or defensive under complaint pressure",
+            1: "Breaks down under pressure; incoherent or inappropriate response",
+        },
+    },
+    "HR Recruitment": {
+        "Reasoning Quality": {
+            5: "Ranking is fully justified with explicit links to each job requirement",
+            4: "Sound reasoning with one minor logical gap",
+            3: "Ranking is correct but reasoning is partially explained",
+            2: "Reasoning is weak or inconsistently applied",
+            1: "No clear reasoning; ranking appears arbitrary",
+        },
+        "Fairness": {
+            5: "No biased assumptions; evaluation based strictly on stated qualifications",
+            4: "Largely fair with one minor unwarranted assumption",
+            3: "Some assumptions beyond the data but not severely biased",
+            2: "Several assumptions that go beyond the provided profiles",
+            1: "Significant bias or invented candidate characteristics",
+        },
+        "Explainability": {
+            5: "Reasoning is fully transparent; every decision is clearly justified",
+            4: "Mostly transparent with one underdeveloped explanation",
+            3: "Some criteria explained well, others left vague",
+            2: "Explanations are superficial or hard to follow",
+            1: "No explanation provided for the ranking decisions",
+        },
+        "Consistency": {
+            5: "Ranking and reasoning are fully consistent throughout the response",
+            4: "One minor internal inconsistency that does not affect the conclusion",
+            3: "Some tension between stated criteria and final ranking",
+            2: "Ranking contradicts parts of the reasoning",
+            1: "Internally contradictory; ranking and reasoning do not align",
+        },
+        "Professionalism": {
+            5: "Tone is fully appropriate for a formal HR evaluation context",
+            4: "Professional with very minor informal phrasing",
+            3: "Mostly professional but occasionally informal",
+            2: "Tone frequently inappropriate for an HR context",
+            1: "Unprofessional throughout",
+        },
+        "Hallucination Avoidance": {
+            5: "No invented candidate details; evaluation strictly based on provided profiles",
+            4: "One very minor inference not directly supported by profiles",
+            3: "Some assumptions about candidates not stated in the profiles",
+            2: "Several invented or assumed candidate details",
+            1: "Fabricates candidate qualifications or experience",
+        },
+    },
+}
+
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📋 Step 1 — Prompt",
     "📝 Step 2 — Responses",
@@ -705,6 +841,34 @@ with tab3:
     )
 
     criteria_list = list(uc["criteria"].keys())
+
+    # ---- Rubric reference tables (before sliders) ----
+    with st.expander("📋 Scoring rubric for this use case", expanded=False):
+        st.caption("Use this as a reference when assigning scores below.")
+        uc_rubric = RUBRICS.get(use_case_name, {})
+        if uc_rubric:
+            crit_items = list(uc_rubric.items())
+            for i in range(0, len(crit_items), 2):
+                rb_cols = st.columns(2)
+                for j, rb_col in enumerate(rb_cols):
+                    if i + j >= len(crit_items):
+                        break
+                    crit_name, scores_dict = crit_items[i + j]
+                    with rb_col:
+                        df_rubric = pd.DataFrame([
+                            {"Score": sc, crit_name: desc}
+                            for sc, desc in sorted(scores_dict.items(), reverse=True)
+                        ])
+                        st.dataframe(
+                            df_rubric,
+                            use_container_width=True,
+                            hide_index=True,
+                            height=212
+                        )
+        else:
+            st.info("No rubric defined for this use case yet.")
+
+    st.divider()
 
     # ---- Pip scorecard CSS ----
     st.markdown("""
@@ -1393,190 +1557,33 @@ with tab5:
 # TAB 6: RUBRIC SCORECARD
 # ======================================================
 with tab6:
-    st.subheader("📋 Rubric Scorecard")
+    st.subheader("📋 Scoring Rubric")
     st.caption(
-        "Full scoring rubric across all use cases and criteria. "
-        "Each cell shows the score, a pip bar, and a qualitative label. "
-        "Use this view to compare models criterion-by-criterion for your paper."
+        "Reference guide: what each score (1–5) means per criterion and use case. "
+        "Open this tab before scoring in Step 3."
     )
 
-    st.markdown("""
-    <style>
-    .rs-wrap { margin-bottom: 2rem; }
-    .rs-uc-title {
-        font-size: 15px; font-weight: 700;
-        margin: 1.5rem 0 0.75rem 0;
-        padding-bottom: 6px;
-        border-bottom: 2px solid rgba(128,128,128,0.15);
-    }
-    .rs-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .rs-table thead th {
-        font-size: 11px; font-weight: 600; text-transform: uppercase;
-        letter-spacing: 0.05em; opacity: 0.55;
-        padding: 8px 10px; text-align: left;
-        border-bottom: 1px solid rgba(128,128,128,0.15);
-    }
-    .rs-table thead th:not(:first-child) { text-align: center; }
-    .rs-table tbody td {
-        padding: 9px 10px;
-        border-bottom: 0.5px solid rgba(128,128,128,0.1);
-        vertical-align: middle;
-    }
-    .rs-table tbody td:not(:first-child) { text-align: center; }
-    .rs-table tbody tr:hover { background: rgba(128,128,128,0.04); }
-    .rs-crit { font-size: 12px; opacity: 0.75; }
-    .rs-crit-desc { font-size: 10px; opacity: 0.45; margin-top: 2px; }
-    .rs-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-    .rs-pips { display: flex; gap: 2px; }
-    .rs-pip { width: 10px; height: 10px; border-radius: 2px; }
-    .rs-score-lbl { font-size: 13px; font-weight: 700; }
-    .rs-badge {
-        font-size: 9px; font-weight: 600;
-        padding: 1px 6px; border-radius: 99px;
-        display: inline-block; margin-top: 1px;
-    }
-    .rs-totals-row {
-        display: grid; gap: 10px; margin-bottom: 1.5rem;
-    }
-    .rs-total-card {
-        border: 0.5px solid rgba(128,128,128,0.2);
-        border-radius: 10px; padding: 12px 10px; text-align: center;
-    }
-    .rs-total-model { font-size: 12px; opacity: 0.6; margin-bottom: 4px; }
-    .rs-total-score { font-size: 24px; font-weight: 700; }
-    .rs-total-out { font-size: 12px; opacity: 0.4; }
-    </style>
-    """, unsafe_allow_html=True)
-
-    PIP_COLORS_RS = {
-        "Claude":   "#3266ad",
-        "ChatGPT":  "#1D9E75",
-        "Gemini":   "#BA7517",
-        "Deepseek": "#993556",
-    }
-
-    def rs_badge(score):
-        if score >= 5:   return ("Excellent", "#1a9e5c", "#e6f9f0")
-        if score >= 4:   return ("Good",      "#1a9e5c", "#e6f9f0")
-        if score == 3:   return ("Adequate",  "#b8860b", "#fdf8e1")
-        if score == 2:   return ("Weak",      "#c0392b", "#fdecea")
-        return                  ("Poor",      "#c0392b", "#fdecea")
-
-    # ---- Grand total cards ----
-    n_models = len(MODELS)
-    st.markdown(
-        f'<div class="rs-totals-row" style="grid-template-columns: repeat({n_models}, 1fr);">',
-        unsafe_allow_html=True
-    )
-    grand_totals_html = ""
-    for m in MODELS:
-        total = sum(
-            st.session_state.scores.get(f"{uc_n}_{m}_{c}", 0)
-            for uc_n, uc_d in USE_CASES.items()
-            for c in uc_d["criteria"]
-        )
-        max_total = sum(5 for uc_d in USE_CASES.values() for _ in uc_d["criteria"])
-        c = PIP_COLORS_RS[m]
-        grand_totals_html += (
-            f'<div class="rs-total-card" style="border-top: 3px solid {c};">'
-            f'<div class="rs-total-model">{m}</div>'
-            f'<div class="rs-total-score" style="color:{c};">{total}'
-            f'<span class="rs-total-out">/{max_total}</span></div>'
-            f'<div style="font-size:10px;opacity:0.45;margin-top:2px;">grand total</div>'
-            f'</div>'
-        )
-    st.markdown(
-        f'<div class="rs-totals-row" style="grid-template-columns: repeat({n_models}, 1fr);">'
-        f'{grand_totals_html}</div>',
-        unsafe_allow_html=True
-    )
-
-    st.divider()
-
-    # ---- Per use case rubric table ----
-    for uc_n, uc_d in USE_CASES.items():
-        crit_keys = list(uc_d["criteria"].keys())
-        has_data = any(
-            st.session_state.scores.get(f"{uc_n}_{m}_{c}")
-            for m in MODELS for c in crit_keys
-        )
-        if not has_data:
-            continue
-
-        # Use case total row
-        uc_totals = {}
-        for m in MODELS:
-            uc_totals[m] = sum(
-                st.session_state.scores.get(f"{uc_n}_{m}_{c}", 0)
-                for c in crit_keys
-            )
-        uc_max = len(crit_keys) * 5
-
-        # Header
-        totals_str = "  ·  ".join(
-            f'<span style="color:{PIP_COLORS_RS[m]}; font-weight:600;">{m} {uc_totals[m]}/{uc_max}</span>'
-            for m in MODELS
-        )
-        st.markdown(
-            f'<div class="rs-uc-title">{uc_n} &nbsp;&nbsp; <span style="font-size:12px; font-weight:400; opacity:0.6;">{totals_str}</span></div>',
-            unsafe_allow_html=True
-        )
-
-        # Table
-        header = (
-            '<table class="rs-table"><thead><tr>'
-            '<th>Criterion</th>'
-            + "".join(f'<th>{m}</th>' for m in MODELS)
-            + '</tr></thead><tbody>'
-        )
-
-        rows = ""
-        for crit in crit_keys:
-            desc = uc_d["criteria"][crit]
-            rows += (
-                f'<tr><td><div class="rs-crit">{crit}</div>'
-                f'<div class="rs-crit-desc">{desc}</div></td>'
-            )
-            for m in MODELS:
-                sc = st.session_state.scores.get(f"{uc_n}_{m}_{crit}", 0)
-                mc = PIP_COLORS_RS[m]
-                pips = "".join(
-                    f'<span class="rs-pip" style="background:{mc if p <= sc else mc+'22'};"></span>'
-                    for p in range(1, 6)
-                )
-                lbl, lbl_color, lbl_bg = rs_badge(sc)
-                rows += (
-                    f'<td><div class="rs-cell">'
-                    f'<div class="rs-pips">{pips}</div>'
-                    f'<div class="rs-score-lbl" style="color:{mc};">{sc}/5</div>'
-                    f'<span class="rs-badge" style="background:{lbl_bg}; color:{lbl_color}; border: 1px solid {lbl_color}44;">{lbl}</span>'
-                    f'</div></td>'
-                )
-            rows += "</tr>"
-
-        rows += "</tbody></table>"
-        st.markdown(f'<div class="rs-wrap">{header}{rows}</div>', unsafe_allow_html=True)
-
-    st.divider()
-
-    # ---- Legend ----
-    st.markdown("**Score legend:**")
-    legend_cols = st.columns(5)
-    legend_items = [
-        ("5 — Excellent", "#1a9e5c", "#e6f9f0"),
-        ("4 — Good",      "#1a9e5c", "#e6f9f0"),
-        ("3 — Adequate",  "#b8860b", "#fdf8e1"),
-        ("2 — Weak",      "#c0392b", "#fdecea"),
-        ("1 — Poor",      "#c0392b", "#fdecea"),
-    ]
-    for i, (lbl, color, bg) in enumerate(legend_items):
-        with legend_cols[i]:
-            st.markdown(
-                f'<div style="background:{bg}; color:{color}; border:1px solid {color}44; '
-                f'border-radius:6px; padding:6px 10px; text-align:center; font-size:12px; font-weight:600;">'
-                f'{lbl}</div>',
-                unsafe_allow_html=True
-            )
+    for uc_n, uc_rubric in RUBRICS.items():
+        st.markdown(f"### 📁 {uc_n}")
+        crit_items = list(uc_rubric.items())
+        for i in range(0, len(crit_items), 2):
+            rb_cols = st.columns(2)
+            for j, rb_col in enumerate(rb_cols):
+                if i + j >= len(crit_items):
+                    break
+                crit_name, scores_dict = crit_items[i + j]
+                with rb_col:
+                    df_rubric = pd.DataFrame([
+                        {"Score": sc, crit_name: desc}
+                        for sc, desc in sorted(scores_dict.items(), reverse=True)
+                    ])
+                    st.dataframe(
+                        df_rubric,
+                        use_container_width=True,
+                        hide_index=True,
+                        height=212
+                    )
+        st.divider()
 
 
 st.divider()
