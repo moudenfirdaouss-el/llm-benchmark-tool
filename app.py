@@ -615,6 +615,7 @@ ACADEMIC_RUBRICS = {
 RANK_COLORS = ["#B8860B", "#708090", "#8B4513", "#555555"]
 
 # ============ SIDEBAR ============
+# ============ SIDEBAR ============
 with st.sidebar:
     st.markdown("## ⚙️ Settings")
     use_case_name = st.selectbox("Use case", list(USE_CASES.keys()))
@@ -631,14 +632,14 @@ with st.sidebar:
         "#0d6efd"
     ]
 
-   for score, label in SCORE_RUBRIC.items():
-    c = scale_colors[score - 1]
+    for score, label in SCORE_RUBRIC.items():
+        c = scale_colors[score - 1]
 
-    st.markdown(
-        f"<span style='color:{c}; font-weight:700'>{score}</span>"
-        f" <span style='font-size:12px; opacity:0.8'>— {label}</span>",
-        unsafe_allow_html=True
-    )
+        st.markdown(
+            f"<span style='color:{c}; font-weight:700'>{score}</span>"
+            f" <span style='font-size:12px; opacity:0.8'>— {label}</span>",
+            unsafe_allow_html=True
+        )
 
     st.divider()
 
