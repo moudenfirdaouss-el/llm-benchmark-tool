@@ -1053,26 +1053,34 @@ with tab5:
         st.divider()
 
         # ---- Bar ----
-        st.subheader("📊 Overall average score")
-            sorted_models = [m for m, _ in ranked]
-            fig_bar = go.Figure(go.Bar(
-                x=sorted_models,
-                y=[overall_avgs.get(m) or 0 for m in sorted_models],
-                marker_color=[MODEL_COLORS[m] for m in sorted_models],
-                text=[f"{overall_avgs.get(m):.2f}" if overall_avgs.get(m) else "—" for m in sorted_models],
-                textposition="outside",
-                width=0.45
-            ))
-            fig_bar.update_layout(
-                yaxis=dict(range=[0, 5.8], title="Score (out of 5)"),
-                xaxis_title="",
-                height=380,
-                showlegend=False,
-                margin=dict(t=20, b=20)
-            )
-            st.plotly_chart(fig_bar, use_container_width=True)
+        # ---- Bar ----
+st.subheader("📊 Overall average score")
 
-        st.divider()
+sorted_models = [m for m, _ in ranked]
+
+fig_bar = go.Figure(go.Bar(
+    x=sorted_models,
+    y=[overall_avgs.get(m) or 0 for m in sorted_models],
+    marker_color=[MODEL_COLORS[m] for m in sorted_models],
+    text=[
+        f"{overall_avgs.get(m):.2f}"
+        if overall_avgs.get(m)
+        else "—"
+        for m in sorted_models
+    ],
+    textposition="outside",
+    width=0.45
+))
+
+fig_bar.update_layout(
+    yaxis=dict(range=[0, 5.8], title="Score (out of 5)"),
+    xaxis_title="",
+    height=380,
+    showlegend=False,
+    margin=dict(t=20, b=20)
+)
+
+st.plotly_chart(fig_bar, use_container_width=True)
 
         # ---- Per use case breakdown ----
         st.subheader("🔍 Breakdown by use case and criterion")
