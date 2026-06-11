@@ -26,7 +26,11 @@ Key things to look for:
 - Does it use financial terminology accurately?
 - Does it provide meaningful business interpretation?"""
     },
+"Evidence Grounding":
+"Uses only information contained in the financial report and avoids unsupported assumptions."
+    },
 
+    
     "Customer Service Chatbot": {
         "prompt": """You are a customer service representative for an international airline.
 A customer has sent this complaint:
@@ -58,6 +62,9 @@ Key things to look for:
 - Does it avoid making promises it cannot keep (e.g. 'you will receive your refund in 3 days')?
 - Is the tone professional but human?"""
     },
+"Evidence Grounding":
+"Uses only information provided in the complaint and avoids inventing policies or guarantees."
+   },
 
     "HR Recruitment": {
         "prompt": """You are a senior HR specialist. Rank the following three candidates for a Marketing Manager position 
@@ -103,5 +110,7 @@ Key things to look for:
 - Does it treat all candidates fairly and professionally?
 - Does it acknowledge nuance (e.g. Candidate C's mixed profile)?
 - Is the final ranking internally consistent with the reasoning?"""
-    }
+  
+        "Evidence Grounding":
+"Ranks candidates using only supplied qualifications and avoids unsupported assumptions."""
 }
