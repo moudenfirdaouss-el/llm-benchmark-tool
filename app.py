@@ -555,94 +555,31 @@ MODEL_COLORS = {
 }
 
 SCORE_RUBRIC = {
-    1: "Poor",
-    2: "Below Average",
-    3: "Adequate",
-    4: "Good",
-    5: "Excellent"
-}
-
-ACADEMIC_RUBRICS = {
-    "Clarity": {
-        1: "Very unclear and difficult to follow",
-        2: "Frequently confusing",
-        3: "Understandable but contains ambiguity",
-        4: "Mostly clear and easy to follow",
-        5: "Extremely clear, concise and well-structured"
-    },
-
-    "Empathy": {
-        1: "No acknowledgement of stakeholder concerns",
-        2: "Minimal acknowledgement",
-        3: "Basic acknowledgement but formulaic",
-        4: "Shows genuine concern",
-        5: "Highly empathetic and human-centred"
-    },
-
-    "Professional Tone": {
-        1: "Unprofessional language",
-        2: "Inconsistent professionalism",
-        3: "Acceptable business tone",
-        4: "Professional throughout",
-        5: "Highly professional and audience-appropriate"
-    },
-
-    "Helpfulness": {
-        1: "Provides no useful guidance",
-        2: "Limited practical value",
-        3: "Some actionable information",
-        4: "Clear next steps",
-        5: "Comprehensive and actionable guidance"
-    },
-
-    "Hallucination Avoidance": {
-        1: "Many fabricated claims",
-        2: "Several unsupported assertions",
-        3: "Some unverifiable statements",
-        4: "Mostly grounded in provided information",
-        5: "Fully grounded and evidence-based"
-    },
-
-    "Evidence Grounding": {
-        1: "Frequently invents facts",
-        2: "Weak connection to source information",
-        3: "Uses some source information correctly",
-        4: "Strongly supported by provided evidence",
-        5: "Every major claim is traceable to provided evidence"
-    }
+    1: "Poor — fails to meet the criterion",
+    2: "Below average — partial or weak attempt",
+    3: "Adequate — meets the criterion at a basic level",
+    4: "Good — clearly meets the criterion with minor gaps",
+    5: "Excellent — fully meets the criterion with depth and precision"
 }
 
 RANK_COLORS = ["#B8860B", "#708090", "#8B4513", "#555555"]
 
 # ============ SIDEBAR ============
-# ============ SIDEBAR ============
 with st.sidebar:
     st.markdown("## ⚙️ Settings")
     use_case_name = st.selectbox("Use case", list(USE_CASES.keys()))
-
     st.divider()
-
     st.markdown("**Scoring scale (1–5):**")
-
-    scale_colors = [
-        "#dc3545",
-        "#fd7e14",
-        "#ffc107",
-        "#28a745",
-        "#0d6efd"
-    ]
-
+    scale_colors = ["#dc3545", "#fd7e14", "#ffc107", "#28a745", "#0d6efd"]
     for score, label in SCORE_RUBRIC.items():
         c = scale_colors[score - 1]
-
+        desc = label.split("—")[1].strip()
         st.markdown(
             f"<span style='color:{c}; font-weight:700'>{score}</span>"
-            f" <span style='font-size:12px; opacity:0.8'>— {label}</span>",
+            f" <span style='font-size:12px; opacity:0.8'>— {desc}</span>",
             unsafe_allow_html=True
         )
-
     st.divider()
-
     st.markdown("**Workflow:**")
     st.markdown("""
 1. Copy the prompt → Step 1
@@ -651,6 +588,20 @@ with st.sidebar:
 4. View charts & rankings → Step 4
 5. Export CSV for your paper
     """)
+    st.divider()
+    st.markdown("**Models:**")
+    for m, c in MODEL_COLORS.items():
+        st.markdown(f"<span style='color:{c}; font-size:16px'>■</span> {m}", unsafe_allow_html=True)
+    st.divider()
+    if st.button("🗑️ Clear all saved data", use_container_width=True):
+        st.session_state.scores    = {}
+        st.session_state.responses = {}
+        st.session_state.notes     = {}
+        save_data()
+        st.success("All data cleared.")
+        st.rerun()
+
+uc = USE_CASES[use_case_name]
 
 # ============ HEADER ============
 st.title("📊 LLM Benchmarking Dashboard")
@@ -660,14 +611,14 @@ st.caption(
 )
 
 # ============ TABS ============
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📋 Step 1 — Prompt",
     "📝 Step 2 — Responses",
     "⭐ Step 3 — Score",
-    "📖 Rubric Guide",
     "📊 Step 4 — Results & Export",
     "🧠 Hallucination Analysis"
 ])
+
 # ======================================================
 # TAB 1: PROMPT
 # ======================================================
@@ -843,7 +794,7 @@ with tab3:
                         label=crit,
                         options=[1, 2, 3, 4, 5],
                         value=saved_score,
-                        format_func=lambda x: f"{x} — {SCORE_RUBRIC[x]}",
+                        format_func=lambda x: f"{x} — {SCORE_RUBRIC[x].split('—')[1].strip()}",
                         key=f"slider_{use_case_name}_{model}_{crit}",
                         label_visibility="collapsed"
                     )
@@ -917,83 +868,9 @@ with tab3:
     )
 
 # ======================================================
-# TAB 4: RUBRIC GUIDE
+# TAB 4: RESULTS & EXPORT
 # ======================================================
 with tab4:
-
-    st.header("📖 Evaluation Rubrics")
-
-    st.info("""
-    Responses are evaluated using a structured
-    rubric-based methodology.
-
-    Score Range:
-    1 = Poor
-    2 = Below Average
-    3 = Adequate
-    4 = Good
-    5 = Excellent
-    """)
-
-    for criterion, levels in ACADEMIC_RUBRICS.items():
-
-        st.subheader(criterion)
-
-        rubric_df = pd.DataFrame({
-            "Score": list(levels.keys()),
-            "Definition": list(levels.values())
-        })
-
-        st.table(rubric_df)
-
-    st.divider()
-
-    st.subheader("Methodological Notes")
-
-    st.markdown("""
-    - Human evaluation was used because criteria such as empathy,
-      professionalism and reasoning quality are difficult to
-      assess automatically.
-
-    - All models were evaluated using identical prompts.
-
-    - Scores were assigned using predefined rubrics.
-
-    - Results should be interpreted as structured human judgement
-      rather than objective truth.
-    """)
-
-    st.subheader("Limitations")
-
-    st.markdown("""
-    - Single evaluator scoring may introduce subjectivity.
-    - Inter-rater reliability was not measured.
-    - Results depend on prompt wording and model version.
-    - Scores reflect observed outputs rather than general model capability.
-    """)
-# ======================================================
-# TAB 5: RESULTS & EXPORT
-# ======================================================
-
-st.success("""
-Research Design
-
-Domains:
-• Finance
-• Customer Service
-• HR
-
-Models:
-• Claude
-• ChatGPT
-• Gemini
-• DeepSeek
-
-Method:
-Rubric-based human evaluation using a
-1–5 scoring framework.
-""")
-with tab5:
     all_scores_flat = st.session_state.scores
 
     has_data = any(
@@ -1052,34 +929,135 @@ with tab5:
 
         st.divider()
 
-        # ---- Bar ----
-        st.subheader("📊 Overall average score")
+        # ---- Radar + Bar ----
+        col_radar, col_bar = st.columns(2)
 
-        sorted_models = [m for m, _ in ranked]
+        with col_radar:
+            st.subheader("📡 Radar — performance by use case")
+            uc_labels = list(USE_CASES.keys())
+            short_labels = [u.replace(" ", "\n") for u in uc_labels]
+            fig_radar = go.Figure()
+            for model in MODELS:
+                vals = [get_avg(uc_n, model) or 0 for uc_n in uc_labels]
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=vals + [vals[0]],
+                    theta=short_labels + [short_labels[0]],
+                    fill="toself",
+                    name=model,
+                    line_color=MODEL_COLORS[model],
+                    fillcolor=MODEL_COLORS[model],
+                    opacity=0.18
+                ))
+            fig_radar.update_layout(
+                polar=dict(radialaxis=dict(visible=True, range=[0, 5], tickfont=dict(size=10))),
+                showlegend=True,
+                height=380,
+                margin=dict(t=20, b=20, l=20, r=20),
+                legend=dict(font=dict(size=12))
+            )
+            st.plotly_chart(fig_radar, use_container_width=True)
 
-        fig_bar = go.Figure(go.Bar(
-            x=sorted_models,
-            y=[overall_avgs.get(m) or 0 for m in sorted_models],
-            marker_color=[MODEL_COLORS[m] for m in sorted_models],
-            text=[
-                f"{overall_avgs.get(m):.2f}"
-                if overall_avgs.get(m)
-                else "—"
-                for m in sorted_models
-            ],
-            textposition="outside",
-            width=0.45
-        ))
+        with col_bar:
+            st.subheader("📊 Overall average score")
+            sorted_models = [m for m, _ in ranked]
+            fig_bar = go.Figure(go.Bar(
+                x=sorted_models,
+                y=[overall_avgs.get(m) or 0 for m in sorted_models],
+                marker_color=[MODEL_COLORS[m] for m in sorted_models],
+                text=[f"{overall_avgs.get(m):.2f}" if overall_avgs.get(m) else "—" for m in sorted_models],
+                textposition="outside",
+                width=0.45
+            ))
+            fig_bar.update_layout(
+                yaxis=dict(range=[0, 5.8], title="Score (out of 5)"),
+                xaxis_title="",
+                height=380,
+                showlegend=False,
+                margin=dict(t=20, b=20)
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
 
-        fig_bar.update_layout(
-            yaxis=dict(range=[0, 5.8], title="Score (out of 5)"),
-            xaxis_title="",
-            height=380,
-            showlegend=False,
-            margin=dict(t=20, b=20)
-        )
+        st.divider()
 
-        st.plotly_chart(fig_bar, use_container_width=True)
+        # ---- Per use case breakdown ----
+        st.subheader("🔍 Breakdown by use case and criterion")
+
+        for uc_n, uc_d in USE_CASES.items():
+            crit_keys = list(uc_d["criteria"].keys())
+            has_uc = any(get_score(uc_n, m, c) is not None for m in MODELS for c in crit_keys)
+            if not has_uc:
+                continue
+
+            with st.expander(f"📁 {uc_n}", expanded=True):
+                rows = []
+                for c in crit_keys:
+                    row = {"Criterion": c}
+                    for m in MODELS:
+                        row[m] = get_score(uc_n, m, c)
+                    rows.append(row)
+                df = pd.DataFrame(rows)
+
+                col_tbl, col_chart = st.columns([1, 1.6])
+
+                with col_tbl:
+                    def color_score(val):
+                        if val is None:
+                            return ""
+                        if val >= 4:
+                            return "background-color:#d4edda; color:#155724"
+                        if val >= 3:
+                            return "background-color:#fff3cd; color:#856404"
+                        return "background-color:#f8d7da; color:#721c24"
+
+                    styled = (
+                        df.set_index("Criterion")
+                        .style
+                        .map(color_score, subset=MODELS)
+                        .format("{:.0f}", na_rep="—")
+                    )
+                    st.dataframe(styled, use_container_width=True, height=len(crit_keys) * 38 + 42)
+
+                    uc_avgs = {m: get_avg(uc_n, m) for m in MODELS}
+                    valid = {m: v for m, v in uc_avgs.items() if v is not None}
+                    if valid:
+                        winner = max(valid, key=lambda m: valid[m])
+                        st.success(f"**Best:** {winner} ({valid[winner]:.2f}/5)")
+
+                with col_chart:
+                    df_melt = df.melt(
+                        id_vars="Criterion", var_name="Model", value_name="Score"
+                    ).dropna()
+                    fig_uc = px.bar(
+                        df_melt, x="Criterion", y="Score", color="Model",
+                        barmode="group",
+                        color_discrete_map=MODEL_COLORS,
+                        text_auto=True
+                    )
+                    fig_uc.update_layout(
+                        yaxis=dict(range=[0, 5.8], title="Score (1–5)"),
+                        xaxis_title="",
+                        height=310,
+                        margin=dict(t=10, b=10),
+                        xaxis_tickangle=-20,
+                        legend=dict(font=dict(size=11))
+                    )
+                    st.plotly_chart(fig_uc, use_container_width=True)
+
+                notes_for_uc = {
+                    m: st.session_state.notes.get(f"{uc_n}_{m}_note", "")
+                    for m in MODELS
+                }
+                if any(v.strip() for v in notes_for_uc.values()):
+                    st.markdown("**Qualitative observations:**")
+                    for m, note in notes_for_uc.items():
+                        if note.strip():
+                            st.markdown(
+                                f"<span style='color:{MODEL_COLORS[m]}; font-weight:600;'>"
+                                f"{m}:</span> {note}",
+                                unsafe_allow_html=True
+                            )
+
+        st.divider()
 
         # ---- Heatmap ----
         st.subheader("🌡️ Full criteria heatmap")
@@ -1171,9 +1149,9 @@ with tab5:
                     st.markdown(f"- **{label}:** {note}")
 
 # ======================================================
-# TAB 6: HALLUCINATION LEADERBOARD
+# TAB 5: HALLUCINATION LEADERBOARD
 # ======================================================
-with tab6:
+with tab5:
 
     # ---- CSS for leaderboard ----
     st.markdown("""
