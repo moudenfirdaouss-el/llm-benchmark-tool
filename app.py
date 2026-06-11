@@ -631,16 +631,14 @@ with st.sidebar:
         "#0d6efd"
     ]
 
-    for score, label in SCORE_RUBRIC.items():
-        c = scale_colors[score - 1]
+   for score, label in SCORE_RUBRIC.items():
+    c = scale_colors[score - 1]
 
-        desc = label.split("—")[1].strip()
-
-        st.markdown(
-            f"<span style='color:{c}; font-weight:700'>{score}</span>"
-            f" <span style='font-size:12px; opacity:0.8'>— {desc}</span>",
-            unsafe_allow_html=True
-        )
+    st.markdown(
+        f"<span style='color:{c}; font-weight:700'>{score}</span>"
+        f" <span style='font-size:12px; opacity:0.8'>— {label}</span>",
+        unsafe_allow_html=True
+    )
 
     st.divider()
 
@@ -844,7 +842,7 @@ with tab3:
                         label=crit,
                         options=[1, 2, 3, 4, 5],
                         value=saved_score,
-                        format_func=lambda x: f"{x} — {SCORE_RUBRIC[x].split('—')[1].strip()}",
+                        format_func=lambda x: f"{x} — {SCORE_RUBRIC[x]}",
                         key=f"slider_{use_case_name}_{model}_{crit}",
                         label_visibility="collapsed"
                     )
@@ -916,18 +914,6 @@ with tab3:
         f'<div class="sc-wrap">{totals_html}{legend_html}{header_html}{rows_html}</div>',
         unsafe_allow_html=True
     )
-confidence_key = f"{use_case_name}_{model}_confidence"
-
-confidence = st.slider(
-    "Confidence in your rating",
-    min_value=1,
-    max_value=5,
-    value=st.session_state.notes.get(confidence_key, 3),
-    key=confidence_key
-)
-
-st.session_state.notes[confidence_key] = confidence
-save_data()
 
 # ======================================================
 # TAB 4: RUBRIC GUIDE
@@ -1067,10 +1053,6 @@ with tab5:
 
         # ---- Bar ----
         st.subheader("📊 Overall average score")
-
-        
-        with col_bar:
-            st.subheader("📊 Overall average score")
             sorted_models = [m for m, _ in ranked]
             fig_bar = go.Figure(go.Bar(
                 x=sorted_models,
