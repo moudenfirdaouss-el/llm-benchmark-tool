@@ -623,7 +623,7 @@ with st.sidebar:
     scale_colors = ["#dc3545", "#fd7e14", "#ffc107", "#28a745", "#0d6efd"]
     for score, label in SCORE_RUBRIC.items():
         c = scale_colors[score - 1]
-        desc = label.split("—")[1].strip()
+        desc = label
         st.markdown(
             f"<span style='color:{c}; font-weight:700'>{score}</span>"
             f" <span style='font-size:12px; opacity:0.8'>— {desc}</span>",
