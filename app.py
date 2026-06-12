@@ -81,9 +81,11 @@ def load_data():
 
 def save_data():
     data = {
-        "scores":    dict(st.session_state.scores),
-        "responses": dict(st.session_state.responses),
-        "notes":     dict(st.session_state.notes),
+        "scores":         dict(st.session_state.scores),
+        "responses":      dict(st.session_state.responses),
+        "notes":          dict(st.session_state.notes),
+        "elo":            dict(st.session_state.elo),
+        "pairwise_votes": dict(st.session_state.pairwise_votes),
     }
     with open(SAVE_FILE, "w") as f:
         json.dump(data, f, indent=2)
@@ -91,9 +93,11 @@ def save_data():
 # ============ SESSION STATE ============
 if "scores" not in st.session_state:
     _saved = load_data()
-    st.session_state.scores    = _saved["scores"]
-    st.session_state.responses = _saved["responses"]
-    st.session_state.notes     = _saved["notes"]
+    st.session_state.scores         = _saved["scores"]
+    st.session_state.responses      = _saved["responses"]
+    st.session_state.notes          = _saved["notes"]
+    st.session_state.elo            = _saved.get("elo", {})
+    st.session_state.pairwise_votes = _saved.get("pairwise_votes", {})
 
 # ============ PRE-LOAD FINANCIAL USE CASE DATA ============
 _FINANCIAL_UC = "Financial Statement Analysis"
@@ -747,13 +751,14 @@ RUBRICS = {
     },
 }
 
-tab1, tab2, tab6, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab6, tab3, tab4, tab5, tab7 = st.tabs([
     "📋 Prompt",
     "📝 Responses",
     "📋 Scoring Rubric",
     "⭐ Score",
     "📊 Results & Export",
     "🧠 Hallucination Analysis",
+    "⚔️ Pairwise Comparison",
 ])
 
 # ======================================================
@@ -1559,6 +1564,179 @@ with tab6:
                     )
     else:
         st.info("No rubric defined for this use case.")
+
+
+# ======================================================
+# TAB 7: PAIRWISE COMPARISON (Chatbot Arena style)
+# ======================================================
+with tab7:
+    st.subheader("⚔️ Pairwise Comparison")
+    st.caption(
+        "Blind side-by-side comparison inspired by Chatbot Arena (Zheng et al., 2023). "
+        "Model names are hidden — pick the better response purely on quality. "
+        "Votes are converted into Elo ratings."
+    )
+
+    import random, math
+
+    def expected_score(ra, rb):
+        return 1 / (1 + math.pow(10, (rb - ra) / 400))
+
+    def update_elo(ra, rb, result, k=32):
+        ea = expected_score(ra, rb)
+        eb = expected_score(rb, ra)
+        return round(ra + k * (result - ea), 1), round(rb + k * ((1 - result) - eb), 1)
+
+    def get_elo(model):
+        return st.session_state.elo.get(model, 1000.0)
+
+    def set_elo(model, val):
+        st.session_state.elo[model] = val
+
+    pair_key = "pair_" + use_case_name
+    if pair_key not in st.session_state:
+        st.session_state[pair_key] = random.sample(MODELS, 2)
+
+    model_a, model_b = st.session_state[pair_key]
+    resp_a = st.session_state.responses.get("resp_" + use_case_name + "_" + model_a, "").strip()
+    resp_b = st.session_state.responses.get("resp_" + use_case_name + "_" + model_b, "").strip()
+
+    vote_key = "votes_" + use_case_name
+    if vote_key not in st.session_state.pairwise_votes:
+        st.session_state.pairwise_votes[vote_key] = []
+    votes_log = st.session_state.pairwise_votes[vote_key]
+
+    st.markdown("**Use case:** " + use_case_name)
+    st.info(
+        "Read both responses carefully. Model identities are hidden. "
+        "Vote for the better one, then click Next pair to compare a new combination."
+    )
+
+    if not resp_a or not resp_b:
+        st.warning("Paste responses in the Responses tab first.")
+    else:
+        nl = "\n"
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown("### Response A")
+            safe_a = resp_a.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace(nl, "<br>")
+            st.markdown(
+                "<div class='response-card' style='border-top:3px solid #888;'>" + safe_a + "</div>",
+                unsafe_allow_html=True
+            )
+        with col_b:
+            st.markdown("### Response B")
+            safe_b = resp_b.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace(nl, "<br>")
+            st.markdown(
+                "<div class='response-card' style='border-top:3px solid #888;'>" + safe_b + "</div>",
+                unsafe_allow_html=True
+            )
+
+        st.divider()
+        st.markdown("**Which response is better?**")
+        c1, c2, c3, c4 = st.columns(4)
+
+        def record_vote(winner, loser, score):
+            ra, rb = get_elo(winner), get_elo(loser)
+            new_ra, new_rb = update_elo(ra, rb, score)
+            set_elo(winner, new_ra)
+            set_elo(loser, new_rb)
+            w_label = winner if score == 1 else ("Tie" if score == 0.5 else loser)
+            votes_log.append({
+                "Use Case": use_case_name,
+                "Model A": model_a,
+                "Model B": model_b,
+                "Winner": w_label
+            })
+            st.session_state.pairwise_votes[vote_key] = votes_log
+            if pair_key in st.session_state:
+                del st.session_state[pair_key]
+            save_data()
+
+        with c1:
+            if st.button("👈 A is better", use_container_width=True, key="vote_a"):
+                record_vote(model_a, model_b, 1)
+                st.rerun()
+        with c2:
+            if st.button("🤝 Tie", use_container_width=True, key="vote_tie"):
+                record_vote(model_a, model_b, 0.5)
+                st.rerun()
+        with c3:
+            if st.button("👉 B is better", use_container_width=True, key="vote_b"):
+                record_vote(model_b, model_a, 1)
+                st.rerun()
+        with c4:
+            if st.button("🔀 Next pair", use_container_width=True, key="vote_skip"):
+                if pair_key in st.session_state:
+                    del st.session_state[pair_key]
+                st.rerun()
+
+    st.divider()
+    st.subheader("🏆 Elo Leaderboard")
+    st.caption("Starting Elo: 1000. Updated after every vote using K=32.")
+
+    elo_ranked = sorted(MODELS, key=lambda m: get_elo(m), reverse=True)
+    rank_icons = ["🥇", "🥈", "🥉", "4️⃣"]
+    elo_cols = st.columns(4)
+    for i, model in enumerate(elo_ranked):
+        elo_val = get_elo(model)
+        color = MODEL_COLORS[model]
+        delta = round(elo_val - 1000, 1)
+        delta_str = ("+" if delta >= 0 else "") + str(delta)
+        with elo_cols[i]:
+            st.markdown(
+                "<div class='metric-card' style='border-top:4px solid " + color + ";'>"
+                "<div style='font-size:22px;'>" + rank_icons[i] + "</div>"
+                "<div style='font-size:17px;font-weight:700;color:" + color + ";margin:4px 0;'>" + model + "</div>"
+                "<div style='font-size:28px;font-weight:800;'>" + str(int(elo_val)) + "</div>"
+                "<div style='font-size:12px;opacity:0.55;'>Elo (" + delta_str + " from start)</div>"
+                "</div>",
+                unsafe_allow_html=True
+            )
+
+    st.divider()
+
+    all_votes = []
+    for uc_n in USE_CASES:
+        for v in st.session_state.pairwise_votes.get("votes_" + uc_n, []):
+            all_votes.append(v)
+
+    if all_votes:
+        st.markdown("**Vote history**")
+        st.dataframe(pd.DataFrame(all_votes), use_container_width=True, hide_index=True)
+        st.caption("Total votes cast: " + str(len(all_votes)))
+
+        st.divider()
+        st.markdown("**Win counts (all use cases)**")
+        win_counts = {m: 0 for m in MODELS}
+        for v in all_votes:
+            w = v.get("Winner")
+            if w in win_counts:
+                win_counts[w] += 1
+        wc_cols = st.columns(4)
+        for i, model in enumerate(elo_ranked):
+            color = MODEL_COLORS[model]
+            with wc_cols[i]:
+                st.markdown(
+                    "<div class='metric-card' style='border-left:3px solid " + color + ";'>"
+                    "<div style='font-size:12px;opacity:0.6;'>" + model + "</div>"
+                    "<div style='font-size:26px;font-weight:700;color:" + color + ";'>" + str(win_counts.get(model, 0)) + "</div>"
+                    "<div style='font-size:11px;opacity:0.5;'>wins</div>"
+                    "</div>",
+                    unsafe_allow_html=True
+                )
+        st.divider()
+        if st.button("🗑️ Reset all pairwise votes & Elo", type="secondary"):
+            st.session_state.elo = {}
+            st.session_state.pairwise_votes = {}
+            for k in list(st.session_state.keys()):
+                if k.startswith("pair_"):
+                    del st.session_state[k]
+            save_data()
+            st.success("All votes and Elo ratings have been reset.")
+            st.rerun()
+    else:
+        st.info("No votes yet — start comparing responses above.")
 
 
 st.divider()
