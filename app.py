@@ -99,6 +99,12 @@ if "scores" not in st.session_state:
     st.session_state.elo            = _saved.get("elo", {})
     st.session_state.pairwise_votes = _saved.get("pairwise_votes", {})
 
+# Always ensure elo and pairwise_votes exist (survive reruns)
+if "elo" not in st.session_state:
+    st.session_state.elo = {}
+if "pairwise_votes" not in st.session_state:
+    st.session_state.pairwise_votes = {}
+
 # ============ PRE-LOAD FINANCIAL USE CASE DATA ============
 _FINANCIAL_UC = "Financial Statement Analysis"
 _FINANCIAL_RESPONSES = {
