@@ -85,7 +85,7 @@ def save_data():
         "responses":      dict(st.session_state.responses),
         "notes":          dict(st.session_state.notes),
         "elo":            dict(st.session_state.elo),
-        "pairwise_votes": dict(st.session_state.pairwise_votes),
+        "votes": dict(st.session_state.votes),
     }
     with open(SAVE_FILE, "w") as f:
         json.dump(data, f, indent=2)
@@ -97,13 +97,13 @@ if "scores" not in st.session_state:
     st.session_state.responses      = _saved["responses"]
     st.session_state.notes          = _saved["notes"]
     st.session_state.elo            = _saved.get("elo", {})
-    st.session_state.pairwise_votes = _saved.get("pairwise_votes", {})
+    st.session_state.votes = _saved.get("votes", {})
 
-# Always ensure elo and pairwise_votes exist (survive reruns)
+# Always ensure elo and votes exist (survive reruns)
 if "elo" not in st.session_state:
     st.session_state.elo = {}
-if "pairwise_votes" not in st.session_state:
-    st.session_state.pairwise_votes = {}
+if "votes" not in st.session_state:
+    st.session_state.votes = {}
 
 # ============ PRE-LOAD FINANCIAL USE CASE DATA ============
 _FINANCIAL_UC = "Financial Statement Analysis"
@@ -760,11 +760,11 @@ RUBRICS = {
 tab1, tab2, tab6, tab3, tab4, tab5, tab7 = st.tabs([
     "📋 Prompt",
     "📝 Responses",
-    "📋 Scoring Rubric",
+    "📋 HELM-Inspired Criteria-Based Evaluation",
     "⭐ Score",
     "📊 Results & Export",
     "🧠 Hallucination Analysis",
-    "⚔️ Pairwise Comparison",
+    "⚔️ Chatbot Arena-Inspired Blind Evaluation",
 ])
 
 # ======================================================
@@ -1573,10 +1573,10 @@ with tab6:
 
 
 # ======================================================
-# TAB 7: PAIRWISE COMPARISON (Chatbot Arena style)
+# TAB 7: Chatbot Arena-Inspired Blind Evaluation
 # ======================================================
 with tab7:
-    st.subheader("⚔️ Pairwise Comparison")
+    st.subheader("⚔️ Chatbot Arena-Inspired Blind Evaluation")
     st.caption(
         "Blind side-by-side comparison inspired by Chatbot Arena (Zheng et al., 2023). "
         "Model names are hidden — pick the better response purely on quality. "
@@ -1608,9 +1608,9 @@ with tab7:
     resp_b = st.session_state.responses.get("resp_" + use_case_name + "_" + model_b, "").strip()
 
     vote_key = "votes_" + use_case_name
-    if vote_key not in st.session_state.pairwise_votes:
-        st.session_state.pairwise_votes[vote_key] = []
-    votes_log = st.session_state.pairwise_votes[vote_key]
+    if vote_key not in st.session_state.votes:
+        st.session_state.votes[vote_key] = []
+    votes_log = st.session_state.votes[vote_key]
 
     st.markdown("**Use case:** " + use_case_name)
     st.info(
@@ -1654,7 +1654,7 @@ with tab7:
                 "Model B": model_b,
                 "Winner": w_label
             })
-            st.session_state.pairwise_votes[vote_key] = votes_log
+            st.session_state.votes[vote_key] = votes_log
             if pair_key in st.session_state:
                 del st.session_state[pair_key]
             save_data()
@@ -1704,7 +1704,7 @@ with tab7:
 
     all_votes = []
     for uc_n in USE_CASES:
-        for v in st.session_state.pairwise_votes.get("votes_" + uc_n, []):
+        for v in st.session_state.votes.get("votes_" + uc_n, []):
             all_votes.append(v)
 
     if all_votes:
@@ -1732,9 +1732,9 @@ with tab7:
                     unsafe_allow_html=True
                 )
         st.divider()
-        if st.button("🗑️ Reset all pairwise votes & Elo", type="secondary"):
+        if st.button("🗑️ Reset all votes & Elo", type="secondary"):
             st.session_state.elo = {}
-            st.session_state.pairwise_votes = {}
+            st.session_state.votes = {}
             for k in list(st.session_state.keys()):
                 if k.startswith("pair_"):
                     del st.session_state[k]
