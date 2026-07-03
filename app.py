@@ -778,7 +778,7 @@ with tab1:
 # TAB 2: RESPONSES
 # ======================================================
 with tab2:
-    st.subheader("Paste the four LLM responses")
+    st.subheader("LLM responses")
 
 
     cols = st.columns(2)
