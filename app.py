@@ -750,7 +750,7 @@ tab1, tab2, tab6, tab3, tab7, tab4 = st.tabs([
     "📝 Responses",
     "📋 HELM-Inspired Criteria-Based Evaluation",
     "⭐ Score",
-    "⚔️ Chatbot Arena-Inspired Blind Evaluation",
+    "⚔️ Chatbot Arena-Inspired Evaluation",
     "📊 Results & Export",
 ])
 
@@ -1226,7 +1226,7 @@ with tab6:
 
 
 # ======================================================
-# TAB 7: Chatbot Arena-Inspired Blind Evaluation
+# TAB 7: Chatbot Arena-Inspired Evaluation
 # ======================================================
 with tab7:
     st.subheader("⚔️ Chatbot Arena-Inspired Evaluation")
