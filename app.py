@@ -769,9 +769,7 @@ tab1, tab2, tab6, tab3, tab7, tab4 = st.tabs([
 # ======================================================
 with tab1:
     st.subheader("Prompt to run in each LLM")
-    st.info(
-        "Copy this exact prompt and run it in each model. Then paste each response in Step 2."
-    )
+    
     st.code(uc["prompt"], language=None)
 
     st.divider()
@@ -792,9 +790,7 @@ with tab1:
 # ======================================================
 with tab2:
     st.subheader("Paste the four LLM responses")
-    st.caption(
-        "Paste each model's exact response to the prompt above. Responses are kept in memory for the full session."
-    )
+
 
     cols = st.columns(2)
     for i, model in enumerate(MODELS):
@@ -840,9 +836,6 @@ with tab2:
 # ======================================================
 with tab3:
     st.subheader("Score each response")
-    st.caption(
-        "Rate each model 1–5 per criterion. The scorecard updates live as sliders are adjusted. Responses can be reviewed in Step 2 before scoring."
-    )
 
     criteria_list = list(uc["criteria"].keys())
 
@@ -1246,10 +1239,10 @@ with tab6:
 # TAB 7: Chatbot Arena-Inspired Blind Evaluation
 # ======================================================
 with tab7:
-    st.subheader("⚔️ Chatbot Arena-Inspired Blind Evaluation")
+    st.subheader("⚔️ Chatbot Arena-Inspired Evaluation")
     st.caption(
         "Blind side-by-side comparison inspired by Chatbot Arena (Zheng et al., 2023). "
-        "Model names are hidden. Pick the better response purely on quality. "
+        "Model names are hidden. "
         "Votes are converted into Elo ratings."
     )
 
@@ -1283,10 +1276,7 @@ with tab7:
     votes_log = st.session_state.votes[vote_key]
 
     st.markdown("**Use case:** " + use_case_name)
-    st.info(
-        "Read both responses carefully. Model identities are hidden. "
-        "Vote for the better one, then click Next pair to compare a new combination."
-    )
+
 
     if not resp_a or not resp_b:
         st.warning("Paste responses in the Responses tab first.")
@@ -1412,7 +1402,7 @@ with tab7:
             st.success("All votes and Elo ratings have been reset.")
             st.rerun()
     else:
-        st.info("No votes yet — start comparing responses above.")
+        st.info("No votes yet")
 
 
 st.divider()
