@@ -994,11 +994,12 @@ with tab3:
     )
 
 # ======================================================
-# TAB 4: RESULTS & EXPORT (moved to last)
+# TAB 4: RESULTS & EXPORT (simplified to only a chart)
 # ======================================================
 with tab4:
     all_scores_flat = st.session_state.scores
 
+    # Check if any scores exist
     has_data = any(
         all_scores_flat.get(f"{uc_n}_{m}_{c}")
         for uc_n, uc_d in USE_CASES.items()
@@ -1009,188 +1010,46 @@ with tab4:
     if not has_data:
         st.info("Score at least one use case in Step 3 to see results here.")
     else:
-        # ---- Helper functions ----
-        def get_score(uc_n, model, crit):
-            return all_scores_flat.get(f"{uc_n}_{model}_{crit}", None)
-
+        # Helper to get average score per model for a given use case
         def get_avg(uc_n, model):
-            vals = [
-                get_score(uc_n, model, c)
-                for c in USE_CASES[uc_n]["criteria"]
-                if get_score(uc_n, model, c) is not None
-            ]
-            return round(sum(vals) / len(vals), 2) if vals else None
-
-        def get_overall(model):
             vals = []
-            for uc_n, uc_d in USE_CASES.items():
-                for c in uc_d["criteria"]:
-                    s = get_score(uc_n, model, c)
-                    if s is not None:
-                        vals.append(s)
+            for c in USE_CASES[uc_n]["criteria"]:
+                s = all_scores_flat.get(f"{uc_n}_{model}_{c}")
+                if s is not None:
+                    vals.append(s)
             return round(sum(vals) / len(vals), 2) if vals else None
 
-        # ---- Overall Rankings ----
-        st.subheader("🏆 Overall Rankings")
-        overall_avgs = {m: get_overall(m) for m in MODELS}
-        ranked = sorted(
-            [(m, v) for m, v in overall_avgs.items() if v is not None],
-            key=lambda x: x[1], reverse=True
-        )
-        rank_labels = ["🥇 1st", "🥈 2nd", "🥉 3rd", "4️⃣ 4th"]
+        # Build data for chart
+        chart_data = []
+        for uc_n in USE_CASES.keys():
+            for m in MODELS:
+                avg = get_avg(uc_n, m)
+                if avg is not None:
+                    chart_data.append({"Use Case": uc_n, "Model": m, "Average Score": avg})
 
-        cols = st.columns(len(ranked))
-        for i, (model, avg) in enumerate(ranked):
-            color = MODEL_COLORS[model]
-            with cols[i]:
-                st.markdown(
-                    f"<div class='metric-card' style='border-top: 4px solid {color};'>"
-                    f"<div style='font-size:13px; opacity:0.6; margin-bottom:4px;'>{rank_labels[i]}</div>"
-                    f"<div style='font-size:20px; font-weight:700; color:{color};'>{model}</div>"
-                    f"<div style='font-size:34px; font-weight:800; margin:6px 0;'>{avg:.2f}</div>"
-                    f"<div style='font-size:12px; opacity:0.55;'>overall avg / 5</div>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
-
-        st.divider()
-
-        # ---- Bar chart (full width) ----
-        st.subheader("📊 Overall average score")
-        sorted_models = [m for m, _ in ranked]
-        fig_bar = go.Figure(go.Bar(
-            x=sorted_models,
-            y=[overall_avgs.get(m) or 0 for m in sorted_models],
-            marker_color=[MODEL_COLORS[m] for m in sorted_models],
-            text=[f"{overall_avgs.get(m):.2f}" if overall_avgs.get(m) else "—" for m in sorted_models],
-            textposition="outside",
-            width=0.35
-        ))
-        fig_bar.update_layout(
-            yaxis=dict(range=[0, 5.8], title="Score (out of 5)"),
-            xaxis_title="",
-            height=340,
-            showlegend=False,
-            margin=dict(t=20, b=20)
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-
-        st.divider()
-
-        # ---- Per use case breakdown (table only, no chart) ----
-        st.subheader("🔍 Breakdown by use case and criterion")
-
-        for uc_n, uc_d in USE_CASES.items():
-            crit_keys = list(uc_d["criteria"].keys())
-            has_uc = any(get_score(uc_n, m, c) is not None for m in MODELS for c in crit_keys)
-            if not has_uc:
-                continue
-
-            with st.expander(f"📁 {uc_n}", expanded=True):
-                rows = []
-                for c in crit_keys:
-                    row = {"Criterion": c}
-                    for m in MODELS:
-                        row[m] = get_score(uc_n, m, c)
-                    rows.append(row)
-                df = pd.DataFrame(rows)
-
-                col_tbl, col_best = st.columns([2, 1])
-
-                with col_tbl:
-                    def color_score(val):
-                        if val is None:
-                            return ""
-                        if val >= 4:
-                            return "background-color:#d4edda; color:#155724"
-                        if val >= 3:
-                            return "background-color:#fff3cd; color:#856404"
-                        return "background-color:#f8d7da; color:#721c24"
-
-                    styled = (
-                        df.set_index("Criterion")
-                        .style
-                        .map(color_score, subset=MODELS)
-                        .format("{:.0f}", na_rep="—")
-                    )
-                    st.dataframe(styled, use_container_width=True, height=len(crit_keys) * 38 + 42)
-
-                with col_best:
-                    uc_avgs = {m: get_avg(uc_n, m) for m in MODELS}
-                    valid = {m: v for m, v in uc_avgs.items() if v is not None}
-                    if valid:
-                        winner = max(valid, key=lambda m: valid[m])
-                        st.success(f"**Best model for this use case:** {winner} ({valid[winner]:.2f}/5)")
-                    else:
-                        st.info("No scores yet for this use case.")
-
-                notes_for_uc = {
-                    m: st.session_state.notes.get(f"{uc_n}_{m}_note", "")
-                    for m in MODELS
-                }
-                if any(v.strip() for v in notes_for_uc.values()):
-                    st.markdown("**Qualitative observations:**")
-                    for m, note in notes_for_uc.items():
-                        if note.strip():
-                            st.markdown(
-                                f"<span style='color:{MODEL_COLORS[m]}; font-weight:600;'>"
-                                f"{m}:</span> {note}",
-                                unsafe_allow_html=True
-                            )
-
-        st.divider()
-
-        # ---- Export ----
-        st.subheader("📄 Export for the paper")
-
-        col_e1, col_e2 = st.columns(2)
-
-        with col_e1:
-            st.markdown("**Full scores (all criteria)**")
-            export_rows = []
-            for uc_n, uc_d in USE_CASES.items():
-                for c in uc_d["criteria"]:
-                    row = {"Use Case": uc_n, "Criterion": c}
-                    for m in MODELS:
-                        row[m] = get_score(uc_n, m, c) or ""
-                    export_rows.append(row)
-            export_df = pd.DataFrame(export_rows)
-            st.dataframe(export_df, use_container_width=True)
-            st.download_button(
-                "⬇️ Download full CSV",
-                export_df.to_csv(index=False).encode("utf-8"),
-                "llm_benchmark_full.csv", "text/csv"
+        if chart_data:
+            df = pd.DataFrame(chart_data)
+            # Create grouped bar chart
+            fig = px.bar(
+                df,
+                x="Use Case",
+                y="Average Score",
+                color="Model",
+                barmode="group",
+                color_discrete_map=MODEL_COLORS,
+                title="Average Score per Model across Evaluation Approaches",
+                labels={"Average Score": "Score (out of 5)"},
+                text_auto=True
             )
-
-        with col_e2:
-            st.markdown("**Summary table (avg per use case)**")
-            summary_rows = []
-            for uc_n in USE_CASES:
-                row = {"Use Case": uc_n}
-                for m in MODELS:
-                    v = get_avg(uc_n, m)
-                    row[m] = f"{v:.2f}" if v else "—"
-                summary_rows.append(row)
-            summary_df = pd.DataFrame(summary_rows)
-            st.dataframe(summary_df, use_container_width=True)
-            st.download_button(
-                "⬇️ Download summary CSV",
-                summary_df.to_csv(index=False).encode("utf-8"),
-                "llm_benchmark_summary.csv", "text/csv"
+            fig.update_layout(
+                yaxis=dict(range=[0, 5.8], title="Average Score (1–5)"),
+                xaxis_title="",
+                height=400,
+                legend=dict(title="Model")
             )
-
-        # Qualitative notes
-        all_notes = {
-            f"{uc_n} / {m}": st.session_state.notes.get(f"{uc_n}_{m}_note", "")
-            for uc_n in USE_CASES
-            for m in MODELS
-        }
-        if any(v.strip() for v in all_notes.values()):
-            st.divider()
-            st.markdown("**Qualitative observations (paste into the discussion section):**")
-            for label, note in all_notes.items():
-                if note.strip():
-                    st.markdown(f"- **{label}:** {note}")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No valid scores available for plotting.")
 
 # ======================================================
 # TAB 6: RUBRIC SCORECARD
