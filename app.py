@@ -939,8 +939,8 @@ with tab3:
 
     st.divider()
 
-    # ---- Live pip scorecard ----
-    st.markdown("##### Live scorecard")
+    # ---- pip scorecard ----
+    st.markdown("##### scorecard")
 
     max_total = len(criteria_list) * 5
     totals = {}
