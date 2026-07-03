@@ -604,7 +604,7 @@ uc = USE_CASES[use_case_name]
 # ============ HEADER ============
 st.title("📊 LLM Benchmarking Dashboard")
 st.caption(
-    f"**{use_case_name}** · "
+    f"HELM-inspired evaluation · **{use_case_name}** · "
     "Claude · ChatGPT · Gemini · Llama · Zero API cost"
 )
 
@@ -778,7 +778,7 @@ with tab1:
 # TAB 2: RESPONSES
 # ======================================================
 with tab2:
-    st.subheader("LLM responses")
+    st.subheader("Paste the four LLM responses")
 
 
     cols = st.columns(2)
@@ -828,25 +828,10 @@ with tab3:
 
     criteria_list = list(uc["criteria"].keys())
 
-
-
-    # ---- Pip Scorecard CSS ----
+    # ---- Pip scorecard CSS ----
     st.markdown("""
     <style>
     .sc-wrap { margin-bottom: 1.5rem; }
-    .sc-totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1rem; }
-    .sc-tcard {
-        border: 0.5px solid rgba(128,128,128,0.2);
-        border-radius: 10px;
-        padding: 12px;
-        text-align: center;
-    }
-    .sc-model { font-size: 12px; opacity: 0.6; margin-bottom: 4px; }
-    .sc-total { font-size: 26px; font-weight: 700; }
-    .sc-out { font-size: 13px; opacity: 0.45; }
-    .sc-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; opacity: 0.65; margin-bottom: 10px; }
-    .sc-legend span { display: flex; align-items: center; gap: 5px; }
-    .sc-dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
     .sc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .sc-table thead th {
         font-size: 12px; font-weight: 500; opacity: 0.6;
@@ -939,33 +924,13 @@ with tab3:
 
     st.divider()
 
-    # ---- pip scorecard ----
-    st.markdown("##### Scorecard")
-
-    max_total = len(criteria_list) * 5
-    totals = {}
-    for m in MODELS:
-        vals = [st.session_state.scores.get(f"{use_case_name}_{m}_{c}", 0) for c in criteria_list]
-        totals[m] = sum(vals)
-
-    # Totals row HTML
-    totals_html = '<div class="sc-totals">'
-    for m in MODELS:
-        c = PIP_COLORS[m]
-        totals_html += (
-            f'<div class="sc-tcard" style="border-top:3px solid {c};">'            f'<div class="sc-model">{m}</div>'            f'<div class="sc-total" style="color:{c};">{totals[m]}'            f'<span class="sc-out">/{max_total}</span></div></div>'
-        )
-    totals_html += "</div>"
-
-    # Legend HTML
-    legend_html = '<div class="sc-legend">'
-    for m in MODELS:
-        legend_html += f'<span><span class="sc-dot" style="background:{PIP_COLORS[m]};"></span>{m}</span>'
-    legend_html += "</div>"
+    # ---- Live per‑criterion scorecard (no totals, only table) ----
+    st.markdown("##### Per‑criterion scores (1–5)")
 
     # Table HTML
     header_html = (
-        '<table class="sc-table"><thead><tr>'        '<th>Criterion</th>'
+        '<table class="sc-table"><thead><tr>'
+        '<th>Criterion</th>'
         + "".join(f"<th>{m}</th>" for m in MODELS)
         + "</tr></thead><tbody>"
     )
@@ -975,20 +940,20 @@ with tab3:
         rows_html += '<tr><td class="sc-crit">' + crit + '</td>'
         for m in MODELS:
             sc = st.session_state.scores.get(f"{use_case_name}_{m}_{crit}", 0)
-            pip_cls = m.lower().replace(" ", "")
             pips = "".join(
-                f'<span class="pip" style="background:{PIP_COLORS[m] if p <= sc else PIP_COLORS[m]+'22'};"></span>'
+                f'<span class="pip" style="background:{PIP_COLORS[m] if p <= sc else PIP_COLORS[m]+"22"};"></span>'
                 for p in range(1, 6)
             )
             rows_html += (
-                f'<td><div class="pip-wrap">{pips}</div>'                f'<div class="pip-score">{sc}/5</div></td>'
+                f'<td><div class="pip-wrap">{pips}</div>'
+                f'<div class="pip-score">{sc}/5</div></td>'
             )
         rows_html += "</tr>"
 
     rows_html += "</tbody></table>"
 
     st.markdown(
-        f'<div class="sc-wrap">{totals_html}{legend_html}{header_html}{rows_html}</div>',
+        f'<div class="sc-wrap">{header_html}{rows_html}</div>',
         unsafe_allow_html=True
     )
 
