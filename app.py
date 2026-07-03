@@ -751,7 +751,7 @@ tab1, tab2, tab6, tab3, tab7, tab4 = st.tabs([
     "📋 HELM-Inspired Criteria-Based Evaluation",
     "⭐ Score",
     "⚔️ Chatbot Arena-Inspired Evaluation",
-    "📊 Results & Export",
+    "📊 Results",
 ])
 
 # ======================================================
@@ -994,23 +994,23 @@ with tab3:
     )
 
 # ======================================================
-# TAB 4: RESULTS & EXPORT (simplified to only a chart)
+# TAB 4: RESULTS (only charts for both approaches)
 # ======================================================
 with tab4:
-    all_scores_flat = st.session_state.scores
+    st.subheader("📈 Evaluation Results")
 
-    # Check if any scores exist
-    has_data = any(
+    # --- HELM-inspired scores ---
+    all_scores_flat = st.session_state.scores
+    has_helm_data = any(
         all_scores_flat.get(f"{uc_n}_{m}_{c}")
         for uc_n, uc_d in USE_CASES.items()
         for m in MODELS
         for c in uc_d["criteria"]
     )
 
-    if not has_data:
-        st.info("Score at least one use case in Step 3 to see results here.")
-    else:
-        # Helper to get average score per model for a given use case
+    if has_helm_data:
+        st.markdown("#### HELM‑Inspired Evaluation – Average Score per Model and Use Case")
+        # Helper to get average per use case and model
         def get_avg(uc_n, model):
             vals = []
             for c in USE_CASES[uc_n]["criteria"]:
@@ -1019,7 +1019,6 @@ with tab4:
                     vals.append(s)
             return round(sum(vals) / len(vals), 2) if vals else None
 
-        # Build data for chart
         chart_data = []
         for uc_n in USE_CASES.keys():
             for m in MODELS:
@@ -1028,28 +1027,60 @@ with tab4:
                     chart_data.append({"Use Case": uc_n, "Model": m, "Average Score": avg})
 
         if chart_data:
-            df = pd.DataFrame(chart_data)
-            # Create grouped bar chart
-            fig = px.bar(
-                df,
+            df_helm = pd.DataFrame(chart_data)
+            fig_helm = px.bar(
+                df_helm,
                 x="Use Case",
                 y="Average Score",
                 color="Model",
                 barmode="group",
                 color_discrete_map=MODEL_COLORS,
-                title="Average Score per Model across Evaluation Approaches",
                 labels={"Average Score": "Score (out of 5)"},
                 text_auto=True
             )
-            fig.update_layout(
+            fig_helm.update_layout(
                 yaxis=dict(range=[0, 5.8], title="Average Score (1–5)"),
                 xaxis_title="",
                 height=400,
                 legend=dict(title="Model")
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig_helm, use_container_width=True)
         else:
-            st.info("No valid scores available for plotting.")
+            st.info("No valid HELM scores available for plotting.")
+    else:
+        st.info("No HELM scores have been recorded yet. Complete the scoring in the 'Score' tab first.")
+
+    st.divider()
+
+    # --- Chatbot Arena Elo ratings ---
+    st.markdown("#### Chatbot Arena – Elo Ratings per Model")
+    elo_values = {m: st.session_state.elo.get(m, 1000.0) for m in MODELS}
+    # Check if any Elo differs from default (i.e., votes have been cast)
+    has_arena_data = any(v != 1000.0 for v in elo_values.values())
+
+    if has_arena_data:
+        df_elo = pd.DataFrame({
+            "Model": list(elo_values.keys()),
+            "Elo Rating": list(elo_values.values())
+        })
+        fig_elo = px.bar(
+            df_elo,
+            x="Model",
+            y="Elo Rating",
+            color="Model",
+            color_discrete_map=MODEL_COLORS,
+            text_auto=True,
+            labels={"Elo Rating": "Elo Score"}
+        )
+        fig_elo.update_layout(
+            yaxis=dict(title="Elo Rating", range=[max(800, min(elo_values.values()) - 50), max(elo_values.values()) + 50]),
+            xaxis_title="",
+            height=400,
+            showlegend=False
+        )
+        st.plotly_chart(fig_elo, use_container_width=True)
+    else:
+        st.info("No votes have been cast in the Chatbot Arena yet. Use the 'Chatbot Arena-Inspired Evaluation' tab to start voting.")
 
 # ======================================================
 # TAB 6: RUBRIC SCORECARD
