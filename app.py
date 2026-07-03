@@ -579,17 +579,7 @@ with st.sidebar:
     st.markdown("## ⚙️ Settings")
     use_case_name = st.selectbox("Use case", list(USE_CASES.keys()))
     st.divider()
-    st.markdown("**Scoring scale (1–5):**")
-    scale_colors = ["#dc3545", "#fd7e14", "#ffc107", "#28a745", "#0d6efd"]
-    for score, label in SCORE_RUBRIC.items():
-        c = scale_colors[score - 1]
-        desc = label.split("—")[1].strip()
-        st.markdown(
-            f"<span style='color:{c}; font-weight:700'>{score}</span>"
-            f" <span style='font-size:12px; opacity:0.8'>— {desc}</span>",
-            unsafe_allow_html=True
-        )
-    st.divider()
+    # Removed Scoring scale section as requested
     st.markdown("**Models:**")
     # Added model versions
     model_display = {
@@ -1408,5 +1398,5 @@ with tab7:
 st.divider()
 st.caption(
     "LLM Benchmarking Dashboard · Firdaouss El Mouden · "
-    "Justus-Liebig-Universität Gießen · No API key required"
+    "Justus-Liebig-Universität Gießen "
 )
