@@ -604,7 +604,7 @@ uc = USE_CASES[use_case_name]
 # ============ HEADER ============
 st.title("📊 LLM Benchmarking Dashboard")
 st.caption(
-    f"HELM-inspired evaluation · **{use_case_name}** · "
+    f"**{use_case_name}** · "
     "Claude · ChatGPT · Gemini · Llama · Zero API cost"
 )
 
