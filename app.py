@@ -830,7 +830,7 @@ with tab3:
 
 
 
-    # ---- Pip scorecard CSS ----
+    # ---- Pip Scorecard CSS ----
     st.markdown("""
     <style>
     .sc-wrap { margin-bottom: 1.5rem; }
@@ -940,7 +940,7 @@ with tab3:
     st.divider()
 
     # ---- pip scorecard ----
-    st.markdown("##### scorecard")
+    st.markdown("##### Scorecard")
 
     max_total = len(criteria_list) * 5
     totals = {}
