@@ -1,2 +1,2 @@
-# llm-benchmark-tool
-HELM-inspired LLM benchmarking tool
+# LLM-Benchmark-Dashboard
+
