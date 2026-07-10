@@ -605,7 +605,7 @@ uc = USE_CASES[use_case_name]
 st.title("📊 LLM Benchmarking Dashboard")
 st.caption(
     f"**{use_case_name}** · "
-    "Claude · ChatGPT · Gemini · Llama · Zero API cost"
+    "Claude · ChatGPT · Gemini · Deepseek · Zero API cost"
 )
 
 # ============ TABS ============
