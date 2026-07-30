@@ -757,7 +757,7 @@ with tab1:
     st.code(uc["prompt"], language=None)
 
     st.divider()
-    st.subheader("Evaluation criteria for this use case")
+    st.subheader("Evaluation Dimensions")
     cols = st.columns(3)
     for i, (crit, desc) in enumerate(uc["criteria"].items()):
         with cols[i % 3]:
