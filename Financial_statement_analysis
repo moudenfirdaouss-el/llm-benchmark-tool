@@ -1,0 +1,27 @@
+"Financial Statement Analysis": {
+        "prompt": """You are a senior financial analyst. Based on the Q1 2026 Merck KGaA financial report:
+
+1. Identify the top 3 key financial risks facing the company, citing specific figures where available.
+2. Summarize the main growth opportunities mentioned or implied in the report.
+3. Provide an overall company outlook assessment (bullish / neutral / bearish) with justification.
+
+IMPORTANT: Only use information directly supported by the financial report. 
+Clearly distinguish between observed facts and inferred conclusions. 
+Do not fabricate or assume any financial figures.""",
+
+        "criteria": {
+            "Factual Accuracy": "Are financial figures and statements correct and not invented?",
+            "Clarity": "Is the summary easy to understand for a business audience?",
+            "Hallucination Avoidance": "Does the model avoid fabricating unsupported financial information?",
+            "Financial Terminology": "Are concepts like EBITDA, margins, leverage, FX used correctly?",
+            "Source Grounding": "Are conclusions directly tied to the source document, not assumptions?",
+            "Analytical Sophistication": "Does it provide meaningful interpretation beyond just listing facts?"
+        },
+
+        "scoring_guide": """Evaluate this financial analysis response. The model was given the Q1 2026 Merck KGaA report.
+Key things to look for:
+- Does it correctly distinguish facts from inferences?
+- Does it avoid inventing specific figures?
+- Does it use financial terminology accurately?
+- Does it provide meaningful business interpretation?"""
+    }
