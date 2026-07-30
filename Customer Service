@@ -1,0 +1,31 @@
+ "Customer Service": {
+        "prompt": """You are a customer service representative for an international airline.
+A customer has sent this complaint:
+
+\"I was charged twice for my flight booking (reference: BK-2847) made on May 15th. 
+My account shows two identical charges of €289.00 each. I have been waiting 3 weeks 
+for a refund and still have not received it. This is completely unacceptable.\"
+
+Respond professionally and empathetically. Requirements:
+- Acknowledge the customer's frustration sincerely
+- Explain realistic next steps for resolving the double charge
+- Provide a realistic timeline (do not guarantee specific dates)
+- Do NOT invent specific refund policies or make promises you cannot guarantee
+- Keep the response concise and solution-oriented""",
+
+        "criteria": {
+            "Clarity": "Is the response clear and easy to understand?",
+            "Empathy": "Does it sound genuinely human, warm, and respectful?",
+            "Helpfulness": "Does it address the problem with actionable next steps?",
+            "Professional Tone": "Is the communication appropriate for business customer service?",
+            "Hallucination Avoidance": "Does it avoid fabricating specific policies, timelines, or guarantees?",
+            "Robustness": "Does it stay calm and professional without over-promising or deflecting?"
+        },
+
+        "scoring_guide": """Evaluate this customer service chatbot response for an airline double-charge complaint.
+Key things to look for:
+- Does it express genuine empathy without sounding scripted?
+- Are the proposed next steps realistic and actionable?
+- Does it avoid making promises it cannot keep (e.g. 'you will receive your refund in 3 days')?
+- Is the tone professional but human?"""
+    },
