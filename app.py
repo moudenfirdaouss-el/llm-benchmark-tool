@@ -6,7 +6,7 @@ from use_cases import USE_CASES
 
 # ============ PAGE CONFIG ============
 st.set_page_config(
-    page_title="LLM Benchmarking Dashboard",
+    page_title="Chatbot Arena-Inspired Evaluation Dashboard",
     page_icon="📊",
     layout="wide"
 )
@@ -602,11 +602,8 @@ with st.sidebar:
 uc = USE_CASES[use_case_name]
 
 # ============ HEADER ============
-st.title("📊 LLM Benchmarking Dashboard")
-st.caption(
-    f"**{use_case_name}** · "
-    "Claude · ChatGPT · Gemini · Deepseek · Zero API cost"
-)
+st.title("⚔️ Chatbot Arena-Inspired Evaluation Dashboard")
+st.caption(f"Blind pairwise comparison for **{use_case_name}**, inspired by Chatbot Arena (Zheng et al., 2023).")
 
 # ============ TABS ============
 
@@ -745,11 +742,9 @@ RUBRICS = {
     },
 }
 
-tab1, tab2, tab6, tab3, tab7 = st.tabs([
+tab1, tab2, tab3 = st.tabs([
     "📋 Prompt",
     "📝 Responses",
-    "📋 HELM-Inspired Criteria-Based Evaluation",
-    "⭐ Score",
     "⚔️ Chatbot Arena-Inspired Evaluation",
 ])
 
@@ -821,179 +816,9 @@ with tab2:
         st.success("All responses ready — go to Step 3 to score them.")
 
 # ======================================================
-# TAB 3: SCORING
-# ======================================================
-with tab3:
-    st.subheader("Score each response")
-
-    criteria_list = list(uc["criteria"].keys())
-
-    # ---- Pip scorecard CSS ----
-    st.markdown("""
-    <style>
-    .sc-wrap { margin-bottom: 1.5rem; }
-    .sc-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    .sc-table thead th {
-        font-size: 12px; font-weight: 500; opacity: 0.6;
-        text-align: left; padding: 6px 8px;
-        border-bottom: 0.5px solid rgba(128,128,128,0.2);
-    }
-    .sc-table thead th:not(:first-child) { text-align: center; }
-    .sc-table tbody tr:hover { background: rgba(128,128,128,0.05); }
-    .sc-table tbody td {
-        padding: 7px 8px;
-        border-bottom: 0.5px solid rgba(128,128,128,0.12);
-    }
-    .sc-table tbody td:not(:first-child) { text-align: center; }
-    .sc-crit { opacity: 0.75; font-size: 12px; }
-    .pip-wrap { display: flex; justify-content: center; gap: 3px; }
-    .pip { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
-    .pip-score { font-size: 11px; opacity: 0.6; margin-top: 3px; }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # ---- Model color map for pips ----
-    PIP_COLORS = {
-        "Claude":   "#3266ad",
-        "ChatGPT":  "#1D9E75",
-        "Gemini":   "#BA7517",
-        "Deepseek": "#993556",
-    }
-
-    # ---- Sliders (compact, one row per model) ----
-    st.markdown("##### Adjust scores")
-    for model in MODELS:
-        color = MODEL_COLORS[model]
-        with st.expander(f"🤖 {model}", expanded=False):
-            col_resp, col_sliders = st.columns([1, 1], gap="large")
-
-            with col_resp:
-                resp_text = st.session_state.responses.get(
-                    f"resp_{use_case_name}_{model}", ""
-                ).strip()
-                st.markdown("<div class='section-header'>Response</div>", unsafe_allow_html=True)
-                if resp_text:
-                    safe = (
-                        resp_text
-                        .replace("&", "&amp;")
-                        .replace("<", "&lt;")
-                        .replace(">", "&gt;")
-                        .replace("\n", "<br>")
-                    )
-                    st.markdown(
-                        f"<div class='response-card' style='border-top:3px solid {color};'>"
-                        f"{safe}</div>",
-                        unsafe_allow_html=True
-                    )
-                    st.caption(f"{len(resp_text.split())} words")
-                else:
-                    st.warning("No response pasted yet — go to Step 2 first.")
-
-            with col_sliders:
-                st.markdown("<div class='section-header'>Scores (1–5)</div>", unsafe_allow_html=True)
-                for crit in criteria_list:
-                    crit_desc = uc["criteria"][crit]
-                    score_key = f"{use_case_name}_{model}_{crit}"
-                    saved_score = st.session_state.scores.get(score_key, 3)
-                    st.markdown(
-                        f"<div class='rubric-box'><strong>{crit}</strong><br>"
-                        f"<span style='font-size:12px;opacity:0.7;'>{crit_desc}</span></div>",
-                        unsafe_allow_html=True
-                    )
-                    score = st.select_slider(
-                        label=crit,
-                        options=[1, 2, 3, 4, 5],
-                        value=saved_score,
-                        format_func=lambda x: f"{x} — {SCORE_RUBRIC[x].split('—')[1].strip()}",
-                        key=f"slider_{use_case_name}_{model}_{crit}",
-                        label_visibility="collapsed"
-                    )
-                    st.session_state.scores[score_key] = score
-                    save_data()
-
-                note_key = f"{use_case_name}_{model}_note"
-                note = st.text_area(
-                    "Qualitative observation (optional)",
-                    value=st.session_state.notes.get(note_key, ""),
-                    height=60,
-                    placeholder="e.g. 'Grounded but slightly over-interpreted FX impact'",
-                    key=f"note_{use_case_name}_{model}"
-                )
-                st.session_state.notes[note_key] = note
-                save_data()
-
-    st.divider()
-
-    # ---- Live per‑criterion scorecard (no totals, only table) ----
-    st.markdown("##### Per‑criterion scores (1–5)")
-
-    # Table HTML
-    header_html = (
-        '<table class="sc-table"><thead><tr>'
-        '<th>Criterion</th>'
-        + "".join(f"<th>{m}</th>" for m in MODELS)
-        + "</tr></thead><tbody>"
-    )
-
-    rows_html = ""
-    for crit in criteria_list:
-        rows_html += '<tr><td class="sc-crit">' + crit + '</td>'
-        for m in MODELS:
-            sc = st.session_state.scores.get(f"{use_case_name}_{m}_{crit}", 0)
-            pips = "".join(
-                f'<span class="pip" style="background:{PIP_COLORS[m] if p <= sc else PIP_COLORS[m]+"22"};"></span>'
-                for p in range(1, 6)
-            )
-            rows_html += (
-                f'<td><div class="pip-wrap">{pips}</div>'
-                f'<div class="pip-score">{sc}/5</div></td>'
-            )
-        rows_html += "</tr>"
-
-    rows_html += "</tbody></table>"
-
-    st.markdown(
-        f'<div class="sc-wrap">{header_html}{rows_html}</div>',
-        unsafe_allow_html=True
-    )
-
-# ======================================================
-# TAB 6: RUBRIC SCORECARD
-# ======================================================
-with tab6:
-    st.subheader(f"📋 Scoring Rubric — {use_case_name}")
-    st.caption(
-        "Reference guide: what each score (1–5) means for each criterion."
-    )
-
-    uc_rubric = RUBRICS.get(use_case_name, {})
-    if uc_rubric:
-        crit_items = list(uc_rubric.items())
-        for i in range(0, len(crit_items), 2):
-            rb_cols = st.columns(2)
-            for j, rb_col in enumerate(rb_cols):
-                if i + j >= len(crit_items):
-                    break
-                crit_name, scores_dict = crit_items[i + j]
-                with rb_col:
-                    df_rubric = pd.DataFrame([
-                        {"Score": sc, crit_name: desc}
-                        for sc, desc in sorted(scores_dict.items(), reverse=True)
-                    ])
-                    st.dataframe(
-                        df_rubric,
-                        use_container_width=True,
-                        hide_index=True,
-                        height=212
-                    )
-    else:
-        st.info("No rubric defined for this use case.")
-
-
-# ======================================================
 # TAB 7: Chatbot Arena-Inspired Evaluation
 # ======================================================
-with tab7:
+with tab3:
     st.subheader("⚔️ Chatbot Arena-Inspired Evaluation")
     st.caption(
         "Blind side-by-side comparison inspired by Chatbot Arena (Zheng et al., 2023). "
